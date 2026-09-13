@@ -1,0 +1,122 @@
+import { fireEvent, screen, userEvent, waitFor } from '@testing-library/react-native';
+
+import type { MediaPicker } from '@/services/media/contracts';
+import { createTestRepository, renderKin } from '../../../../tests/helpers/renderKin';
+import { ChatScreen } from '../ChatScreen';
+
+const cancelledPicker: MediaPicker = {
+  pickImage: async () => null,
+};
+
+async function renderDemoChat(
+  options: {
+    mediaPicker?: MediaPicker;
+    onRemember?: (messageId: string) => void;
+    repository?: ReturnType<typeof createTestRepository>;
+  } = {},
+) {
+  const repository = options.repository ?? createTestRepository();
+  await repository.resetDemo();
+  await renderKin(
+    <ChatScreen
+      mediaPicker={options.mediaPicker ?? cancelledPicker}
+      onOpenRelationship={jest.fn()}
+      onRemember={options.onRemember}
+      spaceId="space-maya-jamie"
+    />,
+    repository,
+  );
+  await screen.findByText('Jamie');
+  return repository;
+}
+
+describe('ChatScreen', () => {
+  it('shows received history and sends a text message with a timestamp', async () => {
+    const user = userEvent.setup();
+    await renderDemoChat();
+
+    expect(screen.getByText('I was trying to impress you.')).toBeTruthy();
+    await user.type(screen.getByLabelText('Message Jamie'), 'What about Saturday at seven?');
+    await user.press(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByText('What about Saturday at seven?')).toBeTruthy();
+    expect((await screen.findAllByLabelText('Sent')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('4:00 PM').length).toBeGreaterThan(0);
+  });
+
+  it('keeps a failed send in place and retries without duplication', async () => {
+    let fail = true;
+    const repository = createTestRepository({
+      failNextSend: () => {
+        const result = fail;
+        fail = false;
+        return result;
+      },
+    });
+    const user = userEvent.setup();
+    await renderDemoChat({ repository });
+
+    await user.type(screen.getByLabelText('Message Jamie'), 'Save me a seat');
+    await user.press(screen.getByRole('button', { name: 'Send' }));
+    await user.press(await screen.findByRole('button', { name: 'Not sent. Tap to retry' }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Not sent. Tap to retry' })).toBeNull(),
+    );
+    expect(screen.getAllByText('Save me a seat')).toHaveLength(1);
+  });
+
+  it('sends a selected image and leaves text messaging usable after cancellation', async () => {
+    const selectedPicker: MediaPicker = {
+      pickImage: async () => ({
+        uri: 'file:///date-night.jpg',
+        width: 1200,
+        height: 900,
+        mimeType: 'image/jpeg',
+      }),
+    };
+    const user = userEvent.setup();
+    const repository = await renderDemoChat({ mediaPicker: selectedPicker });
+
+    await user.press(screen.getByRole('button', { name: 'Send a photo' }));
+    expect(await screen.findByLabelText('Image message: Shared photo')).toBeTruthy();
+    expect((await repository.load()).messages.at(-1)).toMatchObject({
+      kind: 'image',
+      mediaUri: 'file:///date-night.jpg',
+    });
+  });
+
+  it('sends the relationship sticker through the ordinary message path', async () => {
+    const user = userEvent.setup();
+    const repository = await renderDemoChat();
+
+    await user.press(screen.getByRole('button', { name: 'Open relationship stickers' }));
+    await user.press(screen.getByRole('button', { name: 'Send Jamie cooking sticker' }));
+
+    expect(await screen.findByLabelText('Sticker message: Jamie cooking')).toBeTruthy();
+    expect((await repository.load()).messages.at(-1)?.kind).toBe('sticker');
+  });
+
+  it('reacts and exposes Remember this through long-press and accessibility', async () => {
+    const onRemember = jest.fn();
+    const user = userEvent.setup();
+    await renderDemoChat({ onRemember });
+    const message = screen.getByLabelText(
+      'Message from Jamie: I was trying to impress you. Actions available',
+    );
+
+    await user.longPress(message);
+    await user.press(screen.getByRole('button', { name: 'React with heart' }));
+    await waitFor(() => expect(screen.getAllByText('❤️ 1')).toHaveLength(2));
+
+    const updatedMessage = screen.getByLabelText(
+      'Message from Jamie: I was trying to impress you. Actions available',
+    );
+    await fireEvent(updatedMessage, 'accessibilityAction', {
+      nativeEvent: { actionName: 'activate' },
+    });
+    await user.press(screen.getByRole('button', { name: 'Remember this' }));
+
+    await waitFor(() => expect(onRemember).toHaveBeenCalledWith('message-3'));
+  });
+});

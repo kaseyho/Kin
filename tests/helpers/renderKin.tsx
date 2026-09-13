@@ -5,7 +5,7 @@ import type { StorageAdapter } from '@/data/contracts';
 import { createDemoKinRepository } from '@/data/demo/DemoKinRepository';
 import { KinProvider } from '@/state/KinProvider';
 
-export function createTestRepository() {
+export function createTestRepository(options: { failNextSend?: () => boolean } = {}) {
   let value: string | null = null;
   let sequence = 0;
   const storage: StorageAdapter = {
@@ -22,6 +22,7 @@ export function createTestRepository() {
     id: (kind) => `${kind}-${++sequence}`,
     inviteCode: () => 'KIN123',
     now: () => '2026-09-13T08:00:00.000Z',
+    failNextSend: options.failNextSend,
   });
 }
 

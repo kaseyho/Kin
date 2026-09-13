@@ -97,7 +97,7 @@ class DemoKinRepository implements KinRepository {
     const profile: UserProfile = existing
       ? { ...existing, displayName, avatarUri: input.avatarUri }
       : {
-          id: this.makeId('profile'),
+          id: this.makeUniqueId('profile', snapshot),
           displayName,
           avatarUri: input.avatarUri,
           createdAt: this.now(),
@@ -121,13 +121,13 @@ class DemoKinRepository implements KinRepository {
     }
 
     const otherProfile: UserProfile = {
-      id: this.makeId('profile'),
+      id: this.makeUniqueId('profile', snapshot),
       displayName: otherDisplayName,
       avatarUri: 'asset://kin/jamie',
       createdAt: this.now(),
     };
     const space: KinSpace = {
-      id: this.makeId('space'),
+      id: this.makeUniqueId('space', snapshot),
       createdBy: currentProfile.id,
       inviteCode: this.makeInviteCode().trim().toUpperCase(),
       createdAt: this.now(),
@@ -198,7 +198,7 @@ class DemoKinRepository implements KinRepository {
     }
 
     const message: Message = {
-      id: this.makeId('message'),
+      id: this.makeUniqueId('message', snapshot),
       spaceId: input.spaceId,
       senderId: currentProfile.id,
       kind: input.kind,
@@ -277,7 +277,7 @@ class DemoKinRepository implements KinRepository {
     this.requireMembership(snapshot, input.spaceId, currentProfile.id);
     const memory = createMemoryItem({
       ...input,
-      id: this.makeId('memory'),
+      id: this.makeUniqueId('memory', snapshot),
       createdBy: currentProfile.id,
       now: this.now(),
     });
@@ -364,6 +364,24 @@ class DemoKinRepository implements KinRepository {
 
   private async current(): Promise<KinSnapshot> {
     return this.snapshot ? clone(this.snapshot) : this.load();
+  }
+
+  private makeUniqueId(
+    kind: 'profile' | 'space' | 'message' | 'memory',
+    snapshot: KinSnapshot,
+  ): Id {
+    const candidate = this.makeId(kind);
+    const existingIds = new Set([
+      ...snapshot.profiles.map((item) => item.id),
+      ...snapshot.spaces.map((item) => item.id),
+      ...snapshot.messages.map((item) => item.id),
+      ...snapshot.memories.map((item) => item.id),
+    ]);
+    if (!existingIds.has(candidate)) return candidate;
+
+    let suffix = 2;
+    while (existingIds.has(`${candidate}-${suffix}`)) suffix += 1;
+    return `${candidate}-${suffix}`;
   }
 
   private async setMessageState(
