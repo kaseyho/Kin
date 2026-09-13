@@ -5,6 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/Avatar';
 import { ScreenState } from '@/components/ScreenState';
 import { colors, relationshipThemes, spacing } from '@/design/tokens';
+import type { MemoryKind } from '@/domain/models';
+import { MemoryEditorScreen } from '@/features/moments/MemoryEditorScreen';
+import { RememberSheet } from '@/features/moments/RememberSheet';
 import type { MediaPicker } from '@/services/media/contracts';
 import { useKin } from '@/state/useKin';
 import { Composer } from './Composer';
@@ -29,6 +32,8 @@ export function ChatScreen({
   const [text, setText] = useState('');
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [showStickers, setShowStickers] = useState(false);
+  const [rememberMessageId, setRememberMessageId] = useState<string | null>(null);
+  const [rememberKind, setRememberKind] = useState<MemoryKind | null>(null);
   const [notice, setNotice] = useState('');
 
   if (kin.status === 'loading') return <ScreenState message="Opening your conversation…" title="Jamie" />;
@@ -97,7 +102,14 @@ export function ChatScreen({
   function remember() {
     const messageId = selectedMessageId;
     setSelectedMessageId(null);
-    if (messageId) onRemember?.(messageId);
+    if (!messageId) return;
+    if (onRemember) onRemember(messageId);
+    else setRememberMessageId(messageId);
+  }
+
+  function closeRememberFlow() {
+    setRememberKind(null);
+    setRememberMessageId(null);
   }
 
   return (
@@ -151,6 +163,21 @@ export function ChatScreen({
         onRemember={remember}
         visible={selectedMessageId !== null}
       />
+      <RememberSheet
+        onClose={closeRememberFlow}
+        onSelect={setRememberKind}
+        visible={rememberMessageId !== null && rememberKind === null}
+      />
+      {rememberMessageId && rememberKind ? (
+        <MemoryEditorScreen
+          kind={rememberKind}
+          onClose={closeRememberFlow}
+          onRequestKinPlus={() => setNotice('Kin+ unlocks unlimited new Moments.')}
+          onSaved={() => undefined}
+          sourceMessageId={rememberMessageId}
+          spaceId={spaceId}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

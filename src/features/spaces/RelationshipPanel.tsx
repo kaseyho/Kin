@@ -12,6 +12,9 @@ import {
   spacing,
 } from '@/design/tokens';
 import { selectOnThisDay, selectUpcoming } from '@/domain/selectors';
+import { MomentCard } from '@/features/moments/MomentCard';
+import { OnThisDayCard } from '@/features/moments/OnThisDayCard';
+import { UpcomingList } from '@/features/moments/UpcomingList';
 import { useKin } from '@/state/useKin';
 import { PersonalizeSpaceSheet } from './PersonalizeSpaceSheet';
 import { SpaceSafetyActions } from './SpaceSafetyActions';
@@ -22,6 +25,7 @@ interface RelationshipPanelProps {
   isKinPlus?: boolean;
   onBack?: () => void;
   onOpenKinPlus: () => void;
+  onOpenMemory?: (memoryId: string) => void;
   onOpenTimeline: () => void;
   onSpaceUnavailable: () => void;
 }
@@ -30,6 +34,7 @@ export function RelationshipPanel({
   isKinPlus = false,
   onBack,
   onOpenKinPlus,
+  onOpenMemory = () => undefined,
   onOpenTimeline,
   onSpaceUnavailable,
   spaceId,
@@ -100,36 +105,24 @@ export function RelationshipPanel({
 
           {onThisDay ? (
             <View style={styles.editorialSection} testID="relationship-on-this-day">
-              <Text style={styles.eyebrow}>ON THIS DAY</Text>
-              <Text style={styles.memoryTitle}>{onThisDay.title}</Text>
-              <Text style={styles.copy}>{onThisDay.note}</Text>
-              <Text style={styles.meta}>{formatLongDate(onThisDay.occurredOn)} · From your timeline</Text>
+              <OnThisDayCard memory={onThisDay} onOpen={onOpenMemory} partnerName={partnerName} />
             </View>
           ) : null}
 
           <View style={styles.section} testID="relationship-upcoming">
             <Text style={styles.eyebrow}>UPCOMING</Text>
-            {upcoming.length ? upcoming.map(({ daysAway, item }) => (
-              <View key={item.id} style={styles.listRow}>
-                <View style={[styles.dateMark, { borderColor: theme.accent }]}>
-                  <Text style={[styles.dateMarkText, { color: theme.accent }]}>{relativeDay(daysAway)}</Text>
-                </View>
-                <View style={styles.listCopy}>
-                  <Text style={styles.rowTitle}>{item.title}</Text>
-                  <Text style={styles.meta}>{item.kind === 'plan' ? 'Plan' : 'Important date'}</Text>
-                </View>
-              </View>
-            )) : <Text style={styles.copy}>Nothing planned here yet.</Text>}
+            <UpcomingList items={upcoming} />
           </View>
 
           <View style={styles.section} testID="relationship-recent-moments">
             <Text style={styles.eyebrow}>RECENT MOMENTS</Text>
             {recentMoments.map((moment) => (
-              <View key={moment.id} style={styles.momentRow}>
-                <Text style={styles.memoryTitle}>{moment.title}</Text>
-                <Text numberOfLines={2} style={styles.copy}>{moment.note}</Text>
-                <Text style={styles.meta}>{formatLongDate(moment.occurredOn)}</Text>
-              </View>
+              <MomentCard
+                key={moment.id}
+                memory={moment}
+                onOpen={onOpenMemory}
+                sourceExcerpt={snapshot.messages.find((message) => moment.sourceMessageIds.includes(message.id))?.body}
+              />
             ))}
           </View>
 
@@ -189,20 +182,12 @@ function formatLongDate(value: string): string {
   );
 }
 
-function relativeDay(daysAway: number): string {
-  if (daysAway === 0) return 'TODAY';
-  if (daysAway === 1) return 'TOMORROW';
-  return `IN ${daysAway} DAYS`;
-}
-
 const styles = StyleSheet.create({
   accentRule: { borderRadius: 2, height: 3, marginTop: spacing.lg, width: 54 },
   arrow: { color: colors.paper, fontSize: 28 },
   backGlyph: { color: colors.plumInk, fontSize: 36, lineHeight: 38 },
   content: { alignSelf: 'center', maxWidth: 680, paddingBottom: 72, width: '100%' },
   copy: { color: colors.mutedInk, fontSize: 14, lineHeight: 21, marginTop: spacing.xs },
-  dateMark: { alignItems: 'center', borderRadius: radii.sm, borderWidth: 1, justifyContent: 'center', minHeight: 42, minWidth: 76, paddingHorizontal: spacing.sm },
-  dateMarkText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
   editorialSection: { backgroundColor: colors.paper, borderBottomColor: colors.keyline, borderBottomWidth: 1, borderTopColor: colors.keyline, borderTopWidth: 1, padding: spacing.xl },
   eyebrow: { color: colors.rose, fontSize: 11, fontWeight: '900', letterSpacing: 1.25 },
   iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
@@ -212,10 +197,7 @@ const styles = StyleSheet.create({
   kinPlusMark: { color: '#E8A6B9', fontSize: 11, fontWeight: '900', letterSpacing: 1.3 },
   kinPlusTitle: { color: colors.paper, fontSize: 20, fontWeight: '800', lineHeight: 26, marginTop: spacing.md },
   listCopy: { flex: 1 },
-  listRow: { alignItems: 'center', borderBottomColor: colors.keyline, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.md },
-  memoryTitle: { color: colors.plumInk, fontSize: 21, fontWeight: '800', letterSpacing: -0.3, marginTop: spacing.sm },
   meta: { color: colors.mutedInk, fontSize: 11, marginTop: spacing.xs },
-  momentRow: { borderBottomColor: colors.keyline, borderBottomWidth: StyleSheet.hairlineWidth, paddingBottom: spacing.lg, paddingTop: spacing.sm },
   name: { color: colors.plumInk, fontSize: 34, fontWeight: '800', letterSpacing: -1, marginTop: spacing.md },
   primaryAction: { alignItems: 'center', backgroundColor: colors.rose, borderRadius: radii.lg, flexDirection: 'row', justifyContent: 'space-between', padding: spacing.lg },
   primaryCopy: { color: '#F7DBE3', fontSize: 12, marginTop: spacing.xs },
