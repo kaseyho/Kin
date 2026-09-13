@@ -1,33 +1,14 @@
-import { StyleSheet, Text, View } from 'react-native';
+import type { Href } from 'expo-router';
+import { useRouter } from 'expo-router';
 
-import { colors, spacing } from '@/design/tokens';
+import { ChatListScreen } from '@/features/chats/ChatListScreen';
 
 export default function ChatsRoute() {
+  const router = useRouter();
   return (
-    <View style={styles.screen}>
-      <Text accessibilityRole="header" style={styles.title}>
-        Chats
-      </Text>
-      <Text style={styles.copy}>The people who matter, close at hand.</Text>
-    </View>
+    <ChatListScreen
+      onNewSpace={() => router.push('/space/new')}
+      onOpenSpace={(spaceId) => router.push(`/space/${spaceId}` as Href)}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    backgroundColor: colors.parchment,
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: 72,
-  },
-  title: {
-    color: colors.plumInk,
-    fontSize: 36,
-    fontWeight: '700',
-  },
-  copy: {
-    color: colors.mutedInk,
-    fontSize: 16,
-    marginTop: spacing.sm,
-  },
-});
