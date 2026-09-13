@@ -8,6 +8,7 @@ interface MessageListProps {
   currentUserId: string;
   messages: readonly Message[];
   partnerName: string;
+  rememberedMessageIds?: ReadonlySet<string>;
   onOpenActions: (messageId: string) => void;
   onRetry: (messageId: string) => void;
 }
@@ -18,6 +19,7 @@ export function MessageList({
   onOpenActions,
   onRetry,
   partnerName,
+  rememberedMessageIds = new Set(),
 }: MessageListProps) {
   const ordered = [...messages].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
   return (
@@ -31,6 +33,7 @@ export function MessageList({
             {showDate ? <Text style={styles.date}>{formatDate(message.createdAt)}</Text> : null}
             <MessageBubble
               currentUserId={currentUserId}
+              isRemembered={rememberedMessageIds.has(message.id)}
               message={message}
               onOpenActions={() => onOpenActions(message.id)}
               onRetry={() => onRetry(message.id)}

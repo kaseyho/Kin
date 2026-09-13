@@ -61,3 +61,12 @@ export const relationshipThemes = [
 ] as const;
 
 export type RelationshipThemeId = (typeof relationshipThemes)[number]['id'];
+
+export const relationshipWallpapers = [
+  { id: 'paper', name: 'Quiet paper', pattern: 'plain', isPremium: false },
+  { id: 'letters', name: 'Love letters', pattern: 'postmarks', isPremium: false },
+  { id: 'constellations', name: 'Constellations', pattern: 'stars', isPremium: true },
+  { id: 'botanical', name: 'Pressed botanicals', pattern: 'leaves', isPremium: true },
+] as const;
+
+export type RelationshipWallpaperId = (typeof relationshipWallpapers)[number]['id'];

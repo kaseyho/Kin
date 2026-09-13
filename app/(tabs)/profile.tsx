@@ -1,20 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
-import { colors, spacing } from '@/design/tokens';
+import { ProfileScreen } from '@/features/profile/ProfileScreen';
 
 export default function ProfileRoute() {
-  return (
-    <View style={styles.screen}>
-      <Text accessibilityRole="header" style={styles.title}>
-        Profile
-      </Text>
-      <Text style={styles.copy}>Your identity, privacy, and Kin+.</Text>
-    </View>
-  );
+  const router = useRouter();
+  return <ProfileScreen onOpenKinPlus={() => router.push('/kin-plus')} />;
 }
-
-const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.parchment, flex: 1, paddingHorizontal: spacing.xl, paddingTop: 72 },
-  title: { color: colors.plumInk, fontSize: 36, fontWeight: '700' },
-  copy: { color: colors.mutedInk, fontSize: 16, marginTop: spacing.sm },
-});

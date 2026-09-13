@@ -101,7 +101,11 @@ export function ChatScreen({
   }
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.screen, { backgroundColor: theme.wallpaper }]}>
+    <SafeAreaView
+      edges={['top']}
+      style={[styles.screen, { backgroundColor: theme.wallpaper }]}
+      testID="chat-wallpaper"
+    >
       <View style={styles.header}>
         <Avatar accent={theme.accent} name={partnerName} size={42} />
         <View style={styles.identity}>
@@ -124,6 +128,7 @@ export function ChatScreen({
           onOpenActions={setSelectedMessageId}
           onRetry={(messageId) => void kin.retryMessage(messageId)}
           partnerName={partnerName}
+          rememberedMessageIds={new Set(snapshot.memories.flatMap((memory) => memory.sourceMessageIds))}
         />
         {notice ? <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text> : null}
         <Composer

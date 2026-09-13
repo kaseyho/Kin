@@ -1,5 +1,6 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { KeptCorner } from '@/components/KeptCorner';
 import { colors, radii, spacing } from '@/design/tokens';
 import type { Message } from '@/domain/models';
 
@@ -7,12 +8,14 @@ interface MessageBubbleProps {
   currentUserId: string;
   message: Message;
   senderName: string;
+  isRemembered?: boolean;
   onOpenActions: () => void;
   onRetry: () => void;
 }
 
 export function MessageBubble({
   currentUserId,
+  isRemembered = false,
   message,
   onOpenActions,
   onRetry,
@@ -44,6 +47,7 @@ export function MessageBubble({
           pressed && styles.pressed,
         ]}
       >
+        {isRemembered ? <KeptCorner /> : null}
         {message.kind === 'image' && message.mediaUri ? (
           <Image
             accessibilityLabel={`Image message: ${contentLabel}`}
