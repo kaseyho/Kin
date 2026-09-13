@@ -20,11 +20,13 @@ interface ChatScreenProps {
   mediaPicker: MediaPicker;
   onOpenRelationship: () => void;
   onRemember?: (messageId: string) => void;
+  onOpenKinPlus?: () => void;
 }
 
 export function ChatScreen({
   mediaPicker,
   onOpenRelationship,
+  onOpenKinPlus,
   onRemember,
   spaceId,
 }: ChatScreenProps) {
@@ -172,7 +174,7 @@ export function ChatScreen({
         <MemoryEditorScreen
           kind={rememberKind}
           onClose={closeRememberFlow}
-          onRequestKinPlus={() => setNotice('Kin+ unlocks unlimited new Moments.')}
+          onRequestKinPlus={onOpenKinPlus ?? (() => setNotice('Kin+ unlocks unlimited new Moments.'))}
           onSaved={() => undefined}
           sourceMessageId={rememberMessageId}
           spaceId={spaceId}

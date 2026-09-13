@@ -16,6 +16,7 @@ import { MomentCard } from '@/features/moments/MomentCard';
 import { OnThisDayCard } from '@/features/moments/OnThisDayCard';
 import { UpcomingList } from '@/features/moments/UpcomingList';
 import { useKin } from '@/state/useKin';
+import { usePremiumGate } from '@/features/premium/usePremiumGate';
 import { PersonalizeSpaceSheet } from './PersonalizeSpaceSheet';
 import { SpaceSafetyActions } from './SpaceSafetyActions';
 
@@ -31,7 +32,7 @@ interface RelationshipPanelProps {
 }
 
 export function RelationshipPanel({
-  isKinPlus = false,
+  isKinPlus,
   onBack,
   onOpenKinPlus,
   onOpenMemory = () => undefined,
@@ -41,6 +42,7 @@ export function RelationshipPanel({
   today = new Date().toISOString().slice(0, 10) as `${number}-${number}-${number}`,
 }: RelationshipPanelProps) {
   const kin = useKin();
+  const premium = usePremiumGate();
   const [personalizing, setPersonalizing] = useState(false);
 
   if (kin.status === 'loading') {
@@ -75,7 +77,7 @@ export function RelationshipPanel({
   if (personalizing) {
     return (
       <PersonalizeSpaceSheet
-        isKinPlus={isKinPlus}
+        isKinPlus={isKinPlus ?? premium.entitlement.isKinPlus}
         onClose={() => setPersonalizing(false)}
         onRequestKinPlus={onOpenKinPlus}
         spaceId={spaceId}

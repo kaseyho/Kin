@@ -7,6 +7,7 @@ import { colors, radii, spacing } from '@/design/tokens';
 import { canCreateMemory } from '@/domain/limits';
 import type { MemoryItem, MemoryKind, MemoryVisibility, Message } from '@/domain/models';
 import { useKin } from '@/state/useKin';
+import { usePremiumGate } from '@/features/premium/usePremiumGate';
 
 interface MemoryEditorScreenProps {
   spaceId: string;
@@ -20,11 +21,12 @@ interface MemoryEditorScreenProps {
 
 export function MemoryEditorScreen(props: MemoryEditorScreenProps) {
   const kin = useKin();
+  const premium = usePremiumGate();
   const source = kin.snapshot?.messages.find((message) => message.id === props.sourceMessageId);
   const spaceExists = kin.snapshot?.spaces.some((space) => space.id === props.spaceId);
   if (kin.status === 'loading') return <ScreenState message="Opening the source message…" title="Remember this" />;
   if (!source || !spaceExists) return <ScreenState message="The source message is not available." title="Cannot remember this" />;
-  return <MemoryEditorContent {...props} source={source} save={kin.saveMemory} existingCount={kin.snapshot?.memories.filter((memory) => memory.spaceId === props.spaceId).length ?? 0} />;
+  return <MemoryEditorContent {...props} isKinPlus={props.isKinPlus ?? premium.entitlement.isKinPlus} source={source} save={kin.saveMemory} existingCount={kin.snapshot?.memories.filter((memory) => memory.spaceId === props.spaceId).length ?? 0} />;
 }
 
 function MemoryEditorContent({

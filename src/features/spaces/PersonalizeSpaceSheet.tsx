@@ -11,6 +11,7 @@ import {
 } from '@/design/tokens';
 import type { RelationshipPreferences } from '@/domain/models';
 import { useKin } from '@/state/useKin';
+import { usePremiumGate } from '@/features/premium/usePremiumGate';
 import { ThemePreview } from './ThemePreview';
 
 interface PersonalizeSpaceSheetProps {
@@ -22,6 +23,7 @@ interface PersonalizeSpaceSheetProps {
 
 export function PersonalizeSpaceSheet(props: PersonalizeSpaceSheetProps) {
   const kin = useKin();
+  const premium = usePremiumGate();
   const userId = kin.snapshot?.currentUserId;
   const space = kin.snapshot?.spaces.find((item) => item.id === props.spaceId);
   const preference = userId ? space?.preferencesByUser[userId] : undefined;
@@ -36,6 +38,7 @@ export function PersonalizeSpaceSheet(props: PersonalizeSpaceSheetProps) {
   return (
     <PersonalizeContent
       {...props}
+      isKinPlus={props.isKinPlus ?? premium.entitlement.isKinPlus}
       initialPreference={preference}
       save={(next) => kin.updateSpacePreferences({ ...next, spaceId: space.id, userId })}
     />

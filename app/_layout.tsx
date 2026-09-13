@@ -6,22 +6,27 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createDemoKinRepository } from '@/data/demo/DemoKinRepository';
 import { colors } from '@/design/tokens';
 import { KinProvider } from '@/state/KinProvider';
+import { PremiumProvider } from '@/features/premium/PremiumProvider';
+import { createPremiumService } from '@/services/billing';
 
 const repository = createDemoKinRepository(AsyncStorage);
+const premiumService = createPremiumService(AsyncStorage);
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <KinProvider repository={repository}>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            animation: 'fade',
-            contentStyle: { backgroundColor: colors.parchment },
-            headerShown: false,
-          }}
-        />
-      </KinProvider>
+      <PremiumProvider service={premiumService}>
+        <KinProvider repository={repository}>
+          <StatusBar style="dark" />
+          <Stack
+            screenOptions={{
+              animation: 'fade',
+              contentStyle: { backgroundColor: colors.parchment },
+              headerShown: false,
+            }}
+          />
+        </KinProvider>
+      </PremiumProvider>
     </GestureHandlerRootView>
   );
 }

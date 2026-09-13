@@ -2,6 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radii, spacing } from '@/design/tokens';
+import { usePremiumGate } from '@/features/premium/usePremiumGate';
 import { useKin } from '@/state/useKin';
 
 interface ProfileScreenProps {
@@ -10,6 +11,7 @@ interface ProfileScreenProps {
 
 export function ProfileScreen({ onOpenKinPlus }: ProfileScreenProps) {
   const kin = useKin();
+  const premium = usePremiumGate();
   const snapshot = kin.snapshot;
   const userId = snapshot?.currentUserId;
   const profile = snapshot?.profiles.find((item) => item.id === userId);
@@ -25,6 +27,11 @@ export function ProfileScreen({ onOpenKinPlus }: ProfileScreenProps) {
         <Pressable accessibilityLabel="Open Kin+" accessibilityRole="button" onPress={onOpenKinPlus} style={styles.plus}>
           <Text style={styles.plusMark}>KIN+</Text>
           <Text style={styles.plusTitle}>Expression for your closest relationships.</Text>
+          <Text style={styles.plusStatus}>
+            {premium.entitlement.isKinPlus
+              ? premium.entitlement.source === 'demo' ? 'Demo entitlement active' : 'Kin+ active'
+              : 'See themes and unlimited Moments'}
+          </Text>
         </Pressable>
 
         <View style={styles.section}>
@@ -66,6 +73,7 @@ const styles = StyleSheet.create({
   plus: { backgroundColor: colors.plumInk, borderRadius: radii.lg, marginTop: spacing.xl, padding: spacing.xl },
   plusMark: { color: '#E8A6B9', fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
   plusTitle: { color: colors.paper, fontSize: 20, fontWeight: '800', lineHeight: 26, marginTop: spacing.md },
+  plusStatus: { color: '#D9CDD3', fontSize: 12, marginTop: spacing.sm },
   restore: { alignItems: 'center', backgroundColor: colors.paper, borderColor: colors.keyline, borderRadius: radii.md, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md, minHeight: 54, paddingHorizontal: spacing.md },
   restoreAction: { color: colors.rose, fontSize: 13, fontWeight: '800' },
   restoreName: { color: colors.plumInk, fontSize: 15, fontWeight: '800' },
