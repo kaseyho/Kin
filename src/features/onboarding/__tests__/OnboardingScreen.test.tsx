@@ -1,6 +1,6 @@
 import { screen, userEvent } from '@testing-library/react-native';
 
-import { renderKin } from '../../../../tests/helpers/renderKin';
+import { createTestRepository, renderKin } from '../../../../tests/helpers/renderKin';
 import { OnboardingScreen } from '../OnboardingScreen';
 
 describe('OnboardingScreen', () => {
@@ -28,5 +28,14 @@ describe('OnboardingScreen', () => {
     await user.press(screen.getByRole('button', { name: 'Try Maya and Jamie’s demo' }));
 
     expect(onTryDemo).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not offer a local demo reset while using the connected repository', async () => {
+    const repository = createTestRepository();
+    Object.assign(repository, { mode: 'connected' as const });
+
+    await renderKin(<OnboardingScreen onComplete={jest.fn()} />, repository);
+
+    expect(screen.queryByRole('button', { name: 'Try Maya and Jamie’s demo' })).toBeNull();
   });
 });

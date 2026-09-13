@@ -17,6 +17,7 @@ import type { Id, KinSnapshot } from '@/domain/models';
 export type KinLoadStatus = 'loading' | 'ready' | 'corrupt' | 'error';
 
 export interface KinContextValue {
+  mode: KinRepository['mode'];
   status: KinLoadStatus;
   snapshot: KinSnapshot | null;
   error: Error | null;
@@ -95,6 +96,7 @@ export function KinProvider({ children, repository }: KinProviderProps) {
 
   const value = useMemo<KinContextValue>(
     () => ({
+      mode: repository.mode,
       status,
       snapshot,
       error,

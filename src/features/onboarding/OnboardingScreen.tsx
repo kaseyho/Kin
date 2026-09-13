@@ -69,15 +69,17 @@ export function OnboardingScreen({ onComplete, onTryDemo }: OnboardingScreenProp
         </View>
         <View style={styles.actions}>
           <PrimaryButton label="See how Kin remembers" onPress={() => setStep('meaning')} />
-          <Pressable
-            accessibilityLabel="Try Maya and Jamie’s demo"
-            accessibilityRole="button"
-            disabled={saving}
-            onPress={() => void tryDemo()}
-            style={styles.textButton}
-          >
-            <Text style={styles.textButtonLabel}>Try Maya and Jamie’s demo</Text>
-          </Pressable>
+          {kin.mode === 'demo' ? (
+            <Pressable
+              accessibilityLabel="Try Maya and Jamie’s demo"
+              accessibilityRole="button"
+              disabled={saving}
+              onPress={() => void tryDemo()}
+              style={styles.textButton}
+            >
+              <Text style={styles.textButtonLabel}>Try Maya and Jamie’s demo</Text>
+            </Pressable>
+          ) : null}
         </View>
       </SafeAreaView>
     );

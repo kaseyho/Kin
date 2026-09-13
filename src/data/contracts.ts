@@ -73,6 +73,7 @@ export interface UpdateMemoryInput {
 }
 
 export interface KinRepository {
+  readonly mode: 'connected' | 'demo';
   load(): Promise<KinSnapshot>;
   subscribe(listener: (snapshot: KinSnapshot) => void): () => void;
   resetDemo(): Promise<KinSnapshot>;

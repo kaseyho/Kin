@@ -3,13 +3,13 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { createDemoKinRepository } from '@/data/demo/DemoKinRepository';
+import { createRepository } from '@/data/createRepository';
 import { colors } from '@/design/tokens';
 import { KinProvider } from '@/state/KinProvider';
 import { PremiumProvider } from '@/features/premium/PremiumProvider';
 import { createPremiumService } from '@/services/billing';
 
-const repository = createDemoKinRepository(AsyncStorage);
+const repository = createRepository(AsyncStorage);
 const premiumService = createPremiumService(AsyncStorage);
 
 export default function RootLayout() {

@@ -12,6 +12,7 @@ export default function IndexRoute() {
   useEffect(() => {
     if (
       params.demo === 'story' &&
+      kin.mode === 'demo' &&
       kin.status === 'ready' &&
       !kin.snapshot?.currentUserId &&
       !startedDemo.current
@@ -21,7 +22,10 @@ export default function IndexRoute() {
     }
   }, [kin, params.demo]);
 
-  if (kin.status === 'loading' || (params.demo === 'story' && !kin.snapshot?.currentUserId)) {
+  if (
+    kin.status === 'loading'
+    || (kin.mode === 'demo' && params.demo === 'story' && !kin.snapshot?.currentUserId)
+  ) {
     return <ScreenState message="Bringing your people close…" title="Opening Kin" />;
   }
   if (!kin.snapshot?.currentUserId) return <Redirect href="/onboarding" />;

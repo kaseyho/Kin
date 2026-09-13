@@ -32,6 +32,7 @@ export function createDemoKinRepository(
 }
 
 class DemoKinRepository implements KinRepository {
+  readonly mode = 'demo' as const;
   private snapshot: KinSnapshot | null = null;
   private readonly listeners = new Set<(snapshot: KinSnapshot) => void>();
   private sequence = 0;
