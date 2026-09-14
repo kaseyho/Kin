@@ -11,15 +11,14 @@ import {
 } from '@expo-google-fonts/manrope';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { createRepository } from '@/data/createRepository';
+import { createAppRuntime } from '@/bootstrap/createAppRuntime';
+import { ConfigurationErrorScreen } from '@/components/ConfigurationErrorScreen';
 import { colors, typography } from '@/design/tokens';
 import { useReducedMotion } from '@/accessibility/useReducedMotion';
 import { KinProvider } from '@/state/KinProvider';
 import { PremiumProvider } from '@/features/premium/PremiumProvider';
-import { createPremiumService } from '@/services/billing';
 
-const repository = createRepository(AsyncStorage);
-const premiumService = createPremiumService(AsyncStorage);
+const runtime = createAppRuntime(AsyncStorage);
 
 export default function RootLayout() {
   const reducedMotion = useReducedMotion();
@@ -39,10 +38,14 @@ export default function RootLayout() {
     );
   }
 
+  if (runtime.status === 'configuration-error') {
+    return <ConfigurationErrorScreen message={runtime.error.message} />;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <PremiumProvider service={premiumService}>
-        <KinProvider repository={repository}>
+      <PremiumProvider service={runtime.premiumService}>
+        <KinProvider repository={runtime.repository}>
           <StatusBar style="dark" />
           <Stack
             screenOptions={{

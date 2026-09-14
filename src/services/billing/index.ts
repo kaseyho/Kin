@@ -1,15 +1,57 @@
 import { Platform } from 'react-native';
 
+import type { KinDeployment } from '@/config/environment';
 import type { StorageAdapter } from '@/data/contracts';
-import type { PremiumService } from './contracts';
+import { BillingError, type PremiumService } from './contracts';
 import { createDemoPremiumService } from './demo';
 import { createRevenueCatPremiumService } from './revenuecat';
 
-export function createPremiumService(storage?: StorageAdapter): PremiumService {
-  const apiKey = Platform.select({
-    android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
-    ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
-    default: undefined,
-  });
-  return apiKey ? createRevenueCatPremiumService(apiKey) : createDemoPremiumService(false, storage);
+interface PremiumServiceOptions {
+  deployment: KinDeployment;
+  platform?: typeof Platform.OS;
+  storage?: StorageAdapter;
+  values?: Record<string, string | undefined>;
+}
+
+interface PremiumServiceFactories {
+  createRevenueCat: (apiKey: string) => PremiumService;
+}
+
+const defaultFactories: PremiumServiceFactories = {
+  createRevenueCat: createRevenueCatPremiumService,
+};
+
+export function createPremiumService(
+  {
+    deployment,
+    platform = Platform.OS,
+    storage,
+    values = process.env,
+  }: PremiumServiceOptions,
+  factories: PremiumServiceFactories = defaultFactories,
+): PremiumService {
+  if (deployment === 'demo') return createDemoPremiumService(false, storage);
+
+  const apiKey = platform === 'ios'
+    ? values.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY?.trim()
+    : platform === 'android'
+      ? values.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY?.trim()
+      : platform === 'web'
+        ? values.EXPO_PUBLIC_REVENUECAT_WEB_API_KEY?.trim()
+        : undefined;
+
+  return apiKey ? factories.createRevenueCat(apiKey) : createUnavailablePremiumService();
+}
+
+function createUnavailablePremiumService(): PremiumService {
+  const entitlement = { isKinPlus: false, source: 'unavailable' } as const;
+  return {
+    getEntitlement: async () => entitlement,
+    subscribe: () => () => undefined,
+    getOffering: async () => null,
+    purchase: async () => {
+      throw new BillingError('unavailable', 'Kin+ purchases are not configured for this build.');
+    },
+    restore: async () => entitlement,
+  };
 }
