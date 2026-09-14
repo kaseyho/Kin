@@ -2,17 +2,23 @@
 
 Kin is a relationship-first messenger that helps two people keep the parts of a conversation that matter. A message can become a private or shared Moment, important date, or plan, then resurface in the relationship’s timeline. The product stays intentionally small: one person, one private Kin Space, ordinary messaging, and memory without scoring the relationship.
 
-The repository contains a mobile-first Expo app with two runtime modes:
+The repository contains a mobile-first Expo app with four explicit deployment profiles:
 
-- **Demo mode** is the safe default. It persists a fictional Maya-and-Jamie story in AsyncStorage and requires no account or backend.
-- **Connected mode** is selected only when a valid HTTPS Supabase URL and `sb_publishable_…` key are both present. It uses anonymous Supabase Auth, RLS-protected tables, private media storage, and Realtime.
+- **Demo** persists a fictional Maya-and-Jamie story in AsyncStorage and requires no account or backend.
+- **Development** uses local or hosted development services.
+- **Preview** uses hosted staging services and internal-distribution builds.
+- **Production** requires hosted services and real platform billing.
+
+`EXPO_PUBLIC_KIN_ENVIRONMENT` must select one profile. Missing or unsafe connected configuration renders a dedicated setup screen; Kin never substitutes demo data silently. The current connected adapter still has a temporary anonymous-auth path and is therefore not a consumer release until the production account-lifecycle milestone replaces it with email OTP.
 
 ## Run the app
 
-Requirements: a current Node.js/npm installation. A native development build additionally needs the normal Expo iOS or Android toolchain.
+Requirements: Node 22 (recorded in `.nvmrc`) and npm. A native development build additionally needs the normal Expo iOS or Android toolchain.
 
 ```bash
-npm install
+node --version
+npm ci
+cp .env.example .env
 npm start
 ```
 
@@ -57,7 +63,7 @@ EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YOUR_PUBLIC_KEY
 ```
 
-Never place a service-role key in an Expo public variable. In the Supabase project, enable anonymous sign-ins because the MVP creates a private anonymous account before profile setup. Apply the checked-in migration with your normal linked-project workflow:
+Never place a service-role key in an Expo public variable. The existing anonymous connected path is temporary development behavior, not a production auth recommendation. Apply the checked-in migration only after selecting and authenticating the intended project:
 
 ```bash
 supabase link --project-ref YOUR_PROJECT_REF
@@ -81,9 +87,10 @@ Kin+ uses the RevenueCat entitlement identifier `kin_plus`. Configure a current 
 ```dotenv
 EXPO_PUBLIC_REVENUECAT_IOS_API_KEY=appl_YOUR_PUBLIC_KEY
 EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY=goog_YOUR_PUBLIC_KEY
+EXPO_PUBLIC_REVENUECAT_WEB_API_KEY=rcb_YOUR_PUBLIC_KEY
 ```
 
-Real purchases require a configured native development build; the web adapter deliberately reports billing as unavailable. Build with the native RevenueCat module included, for example through `npx expo run:ios`, `npx expo run:android`, or an EAS development profile. The Kin+ screen keeps **Restore purchases** visible, treats user cancellation quietly, and offers retry after provider failure. Demo-mode activation is labeled and stored separately from real provider state.
+Real native purchases require a configured development build. Production web billing also requires a RevenueCat Web Billing app. Until the production billing milestone is complete and externally verified, missing development/preview keys expose an unavailable entitlement and missing production keys fail configuration. Demo-mode activation remains labeled and stored separately from provider state.
 
 ## Architecture
 
@@ -104,3 +111,5 @@ The following are **not externally verified by the repository alone**:
 - native iOS/Android builds, permissions, notifications, and physical-device behavior.
 
 Those checks must be repeated with the intended external projects, store accounts, signed development builds, and devices before release.
+
+See [`docs/runbooks/development.md`](docs/runbooks/development.md) for the verified setup, CI-equivalent commands, EAS profiles, generated-file rules, and external gates. The full consumer-release contract is [`docs/superpowers/specs/2026-09-14-kin-production-readiness-design.md`](docs/superpowers/specs/2026-09-14-kin-production-readiness-design.md).

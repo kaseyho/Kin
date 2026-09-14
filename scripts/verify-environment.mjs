@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+
+const expoCli = fileURLToPath(new URL('../node_modules/expo/bin/cli', import.meta.url));
 
 const demo = readExpoConfig({
   EXPO_PUBLIC_KIN_ENVIRONMENT: 'demo',
@@ -19,8 +22,8 @@ process.stdout.write('Expo environment configuration is valid for demo and produ
 
 function readExpoConfig(overrides) {
   const result = spawnSync(
-    process.platform === 'win32' ? 'npx.cmd' : 'npx',
-    ['expo', 'config', '--type', 'public', '--json'],
+    process.execPath,
+    [expoCli, 'config', '--type', 'public', '--json'],
     {
       cwd: process.cwd(),
       encoding: 'utf8',
@@ -34,7 +37,10 @@ function readExpoConfig(overrides) {
     },
   );
   if (result.status !== 0) {
-    throw new Error(`Expo config failed for ${overrides.EXPO_PUBLIC_KIN_ENVIRONMENT}.`);
+    const reason = result.stderr.trim() || `exit status ${result.status}`;
+    throw new Error(
+      `Expo config failed for ${overrides.EXPO_PUBLIC_KIN_ENVIRONMENT}: ${reason}`,
+    );
   }
   try {
     return JSON.parse(result.stdout);
