@@ -33,9 +33,10 @@ The optional `demoDate=YYYY-MM-DD` parameter pins date-sensitive resurfacing for
 ```bash
 npm run verify
 npm run e2e
+npm run audit:production
 ```
 
-`npm run verify` runs TypeScript, Expo ESLint, all Jest component/domain/acceptance tests, and a production web export. `npm run e2e` starts Expo web and runs the browser-driven phone and wide-screen flows. Playwright may ask for its browser once:
+`npm run verify` runs the resolved Expo environment check, TypeScript, Expo ESLint, all Jest component/domain/acceptance tests, and a demo-profile production web export. `npm run e2e` starts Expo web in explicit demo mode and runs the browser-driven phone and wide-screen flows. `npm run audit:production` fails for high or critical production dependency advisories while reporting moderate findings for review. Playwright may ask for its browser once:
 
 ```bash
 npx playwright install chromium

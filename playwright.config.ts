@@ -15,7 +15,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'CI=1 EXPO_PUBLIC_KIN_ENVIRONMENT=demo npx expo start --web --port 8081',
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 120_000,
     url: 'http://127.0.0.1:8081',
   },
