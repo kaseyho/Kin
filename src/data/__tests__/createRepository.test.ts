@@ -9,18 +9,25 @@ const storage: StorageAdapter = {
 
 const repository = {} as KinRepository;
 
-it('selects demo unless connected public configuration is complete', () => {
+it('selects only the explicitly configured repository', () => {
   const createDemo = jest.fn(() => repository);
   const createConnected = jest.fn(() => repository);
+  const factories = { createConnected, createDemo };
 
-  createRepository(storage, {}, { createConnected, createDemo });
+  expect(() => createRepository(storage, {}, factories))
+    .toThrow('Set EXPO_PUBLIC_KIN_ENVIRONMENT');
+
+  createRepository(storage, {
+    EXPO_PUBLIC_KIN_ENVIRONMENT: 'demo',
+  }, factories);
   expect(createDemo).toHaveBeenCalledTimes(1);
   expect(createConnected).not.toHaveBeenCalled();
 
   createRepository(storage, {
+    EXPO_PUBLIC_KIN_ENVIRONMENT: 'preview',
     EXPO_PUBLIC_SUPABASE_URL: 'https://kin.supabase.co',
     EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_example',
-  }, { createConnected, createDemo });
+  }, factories);
   expect(createConnected).toHaveBeenCalledWith({
     publishableKey: 'sb_publishable_example',
     storage,
