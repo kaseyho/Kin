@@ -13,7 +13,8 @@
     "test:watch": "jest --watch",
     "export:web": "expo export --platform web",
     "e2e": "playwright test",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run export:web"
+    "verify:environment": "node scripts/verify-environment.mjs",
+    "verify": "npm run verify:environment && npm run typecheck && npm run lint && npm test && npm run export:web"
   },
   "repository": {
     "type": "git",

@@ -14,7 +14,7 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   webServer: {
-    command: 'CI=1 npx expo start --web --port 8081',
+    command: 'CI=1 EXPO_PUBLIC_KIN_ENVIRONMENT=demo npx expo start --web --port 8081',
     reuseExistingServer: true,
     timeout: 120_000,
     url: 'http://127.0.0.1:8081',

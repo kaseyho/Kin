@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-import type { KinDeployment } from '@/config/environment';
+import { ConfigurationError, type KinDeployment } from '@/config/environment';
 import type { StorageAdapter } from '@/data/contracts';
 import { BillingError, type PremiumService } from './contracts';
 import { createDemoPremiumService } from './demo';
@@ -40,7 +40,13 @@ export function createPremiumService(
         ? values.EXPO_PUBLIC_REVENUECAT_WEB_API_KEY?.trim()
         : undefined;
 
-  return apiKey ? factories.createRevenueCat(apiKey) : createUnavailablePremiumService();
+  if (apiKey) return factories.createRevenueCat(apiKey);
+  if (deployment === 'production') {
+    throw new ConfigurationError(
+      `Production Kin requires a RevenueCat ${platform} public key.`,
+    );
+  }
+  return createUnavailablePremiumService();
 }
 
 function createUnavailablePremiumService(): PremiumService {

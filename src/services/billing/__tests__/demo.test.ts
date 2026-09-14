@@ -57,6 +57,14 @@ it('keeps connected billing unavailable instead of granting a demo entitlement',
   await expect(service.purchase('monthly')).rejects.toMatchObject({ code: 'unavailable' });
 });
 
+it('fails closed when production billing lacks its platform key', () => {
+  expect(() => createPremiumService({
+    deployment: 'production',
+    platform: 'web',
+    values: {},
+  })).toThrow('RevenueCat web public key');
+});
+
 it('uses the configured public key for the current connected platform', () => {
   const revenueCat = {} as PremiumService;
   const service = createPremiumService(
