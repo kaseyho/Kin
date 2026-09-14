@@ -1,14 +1,16 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
+import { kinImageSource } from '@/design/assets';
 import { colors } from '@/design/tokens';
 
 interface AvatarProps {
   name: string;
   size?: number;
   accent?: string;
+  uri?: string;
 }
 
-export function Avatar({ accent = colors.rose, name, size = 48 }: AvatarProps) {
+export function Avatar({ accent = colors.rose, name, size = 48, uri }: AvatarProps) {
   const initials = name
     .split(/\s+/)
     .filter(Boolean)
@@ -21,7 +23,11 @@ export function Avatar({ accent = colors.rose, name, size = 48 }: AvatarProps) {
       accessibilityLabel={`${name} avatar`}
       style={[styles.avatar, { backgroundColor: accent, borderRadius: size / 2, height: size, width: size }]}
     >
-      <Text style={[styles.initials, { fontSize: size * 0.34 }]}>{initials || 'K'}</Text>
+      {uri ? (
+        <Image accessible={false} source={kinImageSource(uri)} style={styles.image} />
+      ) : (
+        <Text style={[styles.initials, { fontSize: size * 0.34 }]}>{initials || 'K'}</Text>
+      )}
     </View>
   );
 }
@@ -37,4 +43,5 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
+  image: { height: '100%', width: '100%' },
 });

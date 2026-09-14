@@ -2,11 +2,13 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
 import { ScreenState } from '@/components/ScreenState';
+import { readDemoDate } from '@/config/demoDate';
 import { useKin } from '@/state/useKin';
 
 export default function IndexRoute() {
   const kin = useKin();
-  const params = useLocalSearchParams<{ demo?: string }>();
+  const params = useLocalSearchParams<{ demo?: string; demoDate?: string }>();
+  const demoDate = readDemoDate(params.demoDate);
   const startedDemo = useRef(false);
 
   useEffect(() => {
@@ -29,5 +31,11 @@ export default function IndexRoute() {
     return <ScreenState message="Bringing your people close…" title="Opening Kin" />;
   }
   if (!kin.snapshot?.currentUserId) return <Redirect href="/onboarding" />;
-  return <Redirect href="/(tabs)/chats" />;
+  return (
+    <Redirect
+      href={demoDate
+        ? { pathname: '/(tabs)/chats', params: { demoDate } }
+        : '/(tabs)/chats'}
+    />
+  );
 }

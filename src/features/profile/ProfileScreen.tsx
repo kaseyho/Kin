@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, radii, spacing } from '@/design/tokens';
+import { colors, radii, spacing, typography } from '@/design/tokens';
 import { usePremiumGate } from '@/features/premium/usePremiumGate';
 import { useKin } from '@/state/useKin';
 
@@ -67,7 +67,7 @@ export function ProfileScreen({ onOpenKinPlus }: ProfileScreenProps) {
 
 const styles = StyleSheet.create({
   content: { padding: spacing.xl, paddingBottom: 100 },
-  copy: { color: colors.mutedInk, fontSize: 14, lineHeight: 21, marginTop: spacing.sm },
+  copy: { color: colors.mutedInk, fontFamily: typography.body, fontSize: 14, lineHeight: 21, marginTop: spacing.sm },
   label: { color: colors.rose, fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
   name: { color: colors.mutedInk, fontSize: 15, marginTop: spacing.xs },
   plus: { backgroundColor: colors.plumInk, borderRadius: radii.lg, marginTop: spacing.xl, padding: spacing.xl },
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   restoreName: { color: colors.plumInk, fontSize: 15, fontWeight: '800' },
   screen: { backgroundColor: colors.parchment, flex: 1 },
   section: { borderTopColor: colors.keyline, borderTopWidth: 1, marginTop: spacing.xxl, paddingTop: spacing.xl },
-  sectionTitle: { color: colors.plumInk, fontSize: 19, fontWeight: '800', marginTop: spacing.sm },
-  title: { color: colors.plumInk, fontSize: 38, fontWeight: '800', letterSpacing: -1.2 },
-  wordmark: { color: colors.rose, fontSize: 15, fontWeight: '900' },
+  sectionTitle: { color: colors.plumInk, fontFamily: typography.display, fontSize: 19, fontWeight: '800', marginTop: spacing.sm },
+  title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 38, fontWeight: '800', letterSpacing: -1.2 },
+  wordmark: { color: colors.rose, fontFamily: typography.display, fontSize: 15, fontWeight: '900' },
 });

@@ -3,7 +3,8 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenState } from '@/components/ScreenState';
-import { colors, radii, spacing } from '@/design/tokens';
+import { kinImageSource } from '@/design/assets';
+import { colors, radii, spacing, typography } from '@/design/tokens';
 import type { MemoryItem, MemoryVisibility } from '@/domain/models';
 import { useKin } from '@/state/useKin';
 import { formatDate, kindLabel } from './MomentCard';
@@ -109,7 +110,7 @@ function MomentDetailContent({
           </>
         ) : (
           <>
-            {memory.mediaUris.map((uri) => <Image accessibilityLabel={`Memory image: ${memory.title}`} key={uri} source={{ uri }} style={styles.image} />)}
+            {memory.mediaUris.map((uri) => <Image accessibilityLabel={`Memory image: ${memory.title}`} key={uri} source={kinImageSource(uri)} style={styles.image} />)}
             <Text accessibilityRole="header" style={styles.title}>{memory.title}</Text>
             <Text style={styles.date}>{formatDate(memory.occurredOn)}{memory.place ? ` · ${memory.place}` : ''}</Text>
             {memory.note ? <Text style={styles.note}>{memory.note}</Text> : null}
@@ -169,10 +170,10 @@ const styles = StyleSheet.create({
   source: { backgroundColor: colors.paper, borderColor: colors.keyline, borderRadius: radii.md, borderWidth: 1, marginTop: spacing.xl, padding: spacing.lg },
   sourceBody: { color: colors.plumInk, fontSize: 15, lineHeight: 22, marginTop: spacing.sm },
   sourceLabel: { color: colors.rose, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
-  title: { color: colors.plumInk, fontSize: 34, fontWeight: '800', letterSpacing: -1, marginTop: spacing.sm },
+  title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 34, fontWeight: '800', letterSpacing: -1, marginTop: spacing.sm },
   visibility: { alignItems: 'center', backgroundColor: colors.paper, borderColor: colors.keyline, borderRadius: radii.md, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 48 },
   visibilityRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
   visibilityStatus: { color: colors.rose, fontSize: 12, fontWeight: '800', marginTop: spacing.lg },
   visibilityText: { color: colors.plumInk, fontSize: 13, fontWeight: '800' },
-  wordmark: { color: colors.rose, fontSize: 15, fontWeight: '900' },
+  wordmark: { color: colors.rose, fontFamily: typography.display, fontSize: 15, fontWeight: '900' },
 });

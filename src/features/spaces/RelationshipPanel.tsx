@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
 import { ScreenState } from '@/components/ScreenState';
+import { kinWallpaperSource } from '@/design/assets';
 import {
   colors,
   radii,
   relationshipThemes,
   relationshipWallpapers,
   spacing,
+  typography,
 } from '@/design/tokens';
 import { selectOnThisDay, selectUpcoming } from '@/domain/selectors';
 import { MomentCard } from '@/features/moments/MomentCard';
@@ -63,6 +65,7 @@ export function RelationshipPanel({
   const partnerName = preference?.nickname || partner?.displayName || 'Your person';
   const theme = relationshipThemes.find((item) => item.id === preference?.themeId) ?? relationshipThemes[0];
   const wallpaper = relationshipWallpapers.find((item) => item.id === preference?.wallpaperId) ?? relationshipWallpapers[0];
+  const wallpaperSource = kinWallpaperSource(wallpaper.id);
   const memories = snapshot.memories.filter((memory) => memory.spaceId === spaceId);
   const onThisDay = selectOnThisDay(memories, today)[0];
   const upcoming = selectUpcoming(memories, today, 60).slice(0, 3);
@@ -87,6 +90,16 @@ export function RelationshipPanel({
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: theme.wallpaper }]}>
+      {wallpaperSource ? (
+        <View pointerEvents="none" style={styles.wallpaperLayer}>
+          <Image
+            accessible={false}
+            resizeMode="cover"
+            source={wallpaperSource}
+            style={styles.wallpaperImage}
+          />
+        </View>
+      ) : null}
       <View style={styles.topBar}>
         {onBack ? (
           <Pressable accessibilityLabel="Back to conversation" accessibilityRole="button" onPress={onBack} style={styles.iconButton}>
@@ -99,7 +112,7 @@ export function RelationshipPanel({
       <ScrollView contentContainerStyle={styles.content}>
         <View testID="relationship-sections">
           <View style={styles.identity} testID="relationship-identity">
-            <Avatar accent={theme.accent} name={partner?.displayName ?? partnerName} size={82} />
+            <Avatar accent={theme.accent} name={partner?.displayName ?? partnerName} size={82} uri={partner?.avatarUri} />
             <Text accessibilityRole="header" style={styles.name}>{partnerName}</Text>
             <Text style={styles.since}>{relationshipSince(space.relationshipStartDate)}</Text>
             <View style={[styles.accentRule, { backgroundColor: theme.accent }]} />
@@ -189,7 +202,7 @@ const styles = StyleSheet.create({
   arrow: { color: colors.paper, fontSize: 28 },
   backGlyph: { color: colors.plumInk, fontSize: 36, lineHeight: 38 },
   content: { alignSelf: 'center', maxWidth: 680, paddingBottom: 72, width: '100%' },
-  copy: { color: colors.mutedInk, fontSize: 14, lineHeight: 21, marginTop: spacing.xs },
+  copy: { color: colors.mutedInk, fontFamily: typography.body, fontSize: 14, lineHeight: 21, marginTop: spacing.xs },
   editorialSection: { backgroundColor: colors.paper, borderBottomColor: colors.keyline, borderBottomWidth: 1, borderTopColor: colors.keyline, borderTopWidth: 1, padding: spacing.xl },
   eyebrow: { color: colors.rose, fontSize: 11, fontWeight: '900', letterSpacing: 1.25 },
   iconButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
@@ -200,10 +213,10 @@ const styles = StyleSheet.create({
   kinPlusTitle: { color: colors.paper, fontSize: 20, fontWeight: '800', lineHeight: 26, marginTop: spacing.md },
   listCopy: { flex: 1 },
   meta: { color: colors.mutedInk, fontSize: 11, marginTop: spacing.xs },
-  name: { color: colors.plumInk, fontSize: 34, fontWeight: '800', letterSpacing: -1, marginTop: spacing.md },
+  name: { color: colors.plumInk, fontFamily: typography.display, fontSize: 34, fontWeight: '800', letterSpacing: -1, marginTop: spacing.md },
   primaryAction: { alignItems: 'center', backgroundColor: colors.rose, borderRadius: radii.lg, flexDirection: 'row', justifyContent: 'space-between', padding: spacing.lg },
   primaryCopy: { color: '#F7DBE3', fontSize: 12, marginTop: spacing.xs },
-  primaryTitle: { color: colors.paper, fontSize: 18, fontWeight: '800' },
+  primaryTitle: { color: colors.paper, fontFamily: typography.bodyStrong, fontSize: 18, fontWeight: '800' },
   rowTitle: { color: colors.plumInk, fontSize: 15, fontWeight: '800' },
   screen: { flex: 1 },
   secondaryAction: { alignItems: 'center', backgroundColor: colors.paper, borderColor: colors.keyline, borderRadius: radii.md, borderWidth: 1, flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, minHeight: 68, padding: spacing.md },
@@ -212,5 +225,7 @@ const styles = StyleSheet.create({
   smallArrow: { color: colors.mutedInk, fontSize: 26 },
   themeDot: { borderRadius: 12, height: 24, width: 24 },
   topBar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.md },
-  wordmark: { color: colors.rose, fontSize: 16, fontWeight: '900' },
+  wordmark: { color: colors.rose, fontFamily: typography.display, fontSize: 16, fontWeight: '900' },
+  wallpaperImage: { height: '100%', opacity: 0.26, width: '100%' },
+  wallpaperLayer: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
 });

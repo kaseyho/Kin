@@ -214,7 +214,11 @@ class DemoKinRepository implements KinRepository {
     await this.commit(pending);
 
     const deliveryState = this.failNextSend() ? 'failed' : 'sent';
-    return this.setMessageState(message.id, deliveryState);
+    const delivered = await this.setMessageState(message.id, deliveryState);
+    if (deliveryState === 'sent' && input.kind === 'text') {
+      await this.appendDeterministicReply(delivered);
+    }
+    return delivered;
   }
 
   async retryMessage(messageId: Id): Promise<Message> {
@@ -360,6 +364,30 @@ class DemoKinRepository implements KinRepository {
     next.members = next.members.filter((member) => member.spaceId !== spaceId);
     next.messages = next.messages.filter((message) => message.spaceId !== spaceId);
     next.memories = next.memories.filter((memory) => memory.spaceId !== spaceId);
+    await this.commit(next);
+  }
+
+  private async appendDeterministicReply(sent: Message): Promise<void> {
+    const snapshot = await this.current();
+    const partner = snapshot.members.find(
+      (member) => member.spaceId === sent.spaceId && member.userId !== sent.senderId,
+    );
+    if (!partner) return;
+
+    const reply: Message = {
+      body: /saturday/i.test(sent.body)
+        ? 'Saturday sounds perfect. I’ll make it cozy.'
+        : 'I’m here. Tell me more.',
+      createdAt: this.now(),
+      deliveryState: 'sent',
+      id: this.makeUniqueId('message', snapshot),
+      kind: 'text',
+      reactions: [],
+      senderId: partner.userId,
+      spaceId: sent.spaceId,
+    };
+    const next = clone(snapshot);
+    next.messages.push(reply);
     await this.commit(next);
   }
 

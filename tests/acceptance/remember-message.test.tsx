@@ -20,6 +20,8 @@ it('turns a conversation message into a private Moment and marks the source as k
     'Your message: December 5 was honestly the best first date. Actions available',
   ));
   await user.press(screen.getByRole('button', { name: 'Remember this' }));
+  expect(screen.getByRole('button', { name: 'Remember as Important date' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Remember as Plan' })).toBeTruthy();
   await user.press(screen.getByRole('button', { name: 'Remember as Moment' }));
   expect(screen.getByText('Private to you')).toBeTruthy();
   await user.type(screen.getByLabelText('Title'), 'Our first date');

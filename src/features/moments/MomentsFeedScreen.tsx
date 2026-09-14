@@ -1,7 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, spacing } from '@/design/tokens';
+import { colors, spacing, typography } from '@/design/tokens';
 import { selectOnThisDay } from '@/domain/selectors';
 import { useKin } from '@/state/useKin';
 import { MomentCard } from './MomentCard';
@@ -56,9 +56,9 @@ const styles = StyleSheet.create({
   content: { alignSelf: 'center', maxWidth: 680, padding: spacing.xl, paddingBottom: 110, width: '100%' },
   empty: { color: colors.mutedInk, fontSize: 14, lineHeight: 21, marginTop: spacing.md },
   eyebrow: { color: colors.rose, fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
-  intro: { color: colors.mutedInk, fontSize: 15, lineHeight: 22, marginTop: spacing.sm },
+  intro: { color: colors.mutedInk, fontFamily: typography.body, fontSize: 15, lineHeight: 22, marginTop: spacing.sm },
   screen: { backgroundColor: colors.parchment, flex: 1 },
   section: { marginTop: spacing.xxl },
-  title: { color: colors.plumInk, fontSize: 38, fontWeight: '800', letterSpacing: -1.2 },
-  wordmark: { color: colors.rose, fontSize: 15, fontWeight: '900' },
+  title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 38, fontWeight: '800', letterSpacing: -1.2 },
+  wordmark: { color: colors.rose, fontFamily: typography.display, fontSize: 15, fontWeight: '900' },
 });

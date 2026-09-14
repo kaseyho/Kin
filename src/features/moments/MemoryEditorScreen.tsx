@@ -3,7 +3,8 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenState } from '@/components/ScreenState';
-import { colors, radii, spacing } from '@/design/tokens';
+import { kinImageSource } from '@/design/assets';
+import { colors, radii, spacing, typography } from '@/design/tokens';
 import { canCreateMemory } from '@/domain/limits';
 import type { MemoryItem, MemoryKind, MemoryVisibility, Message } from '@/domain/models';
 import { useKin } from '@/state/useKin';
@@ -112,7 +113,7 @@ function MemoryEditorContent({
 
         <View style={styles.sourceCard}>
           <Text style={styles.sourceLabel}>FROM YOUR MESSAGE ON {formatShortDate(source.createdAt)}</Text>
-          {source.kind === 'image' && source.mediaUri ? <Image accessibilityLabel={`Source image: ${source.body}`} source={{ uri: source.mediaUri }} style={styles.sourceImage} /> : null}
+          {source.kind === 'image' && source.mediaUri ? <Image accessibilityLabel={`Source image: ${source.body}`} source={kinImageSource(source.mediaUri)} style={styles.sourceImage} /> : null}
           <Text style={styles.sourceBody}>{source.body}</Text>
         </View>
 
@@ -164,7 +165,7 @@ const styles = StyleSheet.create({
   field: { marginTop: spacing.xl },
   fieldLabel: { color: colors.mutedInk, fontSize: 10, fontWeight: '900', letterSpacing: 1.1, marginBottom: spacing.sm },
   input: { backgroundColor: colors.paper, borderColor: colors.keyline, borderRadius: radii.md, borderWidth: 1, color: colors.plumInk, fontSize: 15, minHeight: 50, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
-  intro: { color: colors.mutedInk, fontSize: 14, lineHeight: 21, marginTop: spacing.sm },
+  intro: { color: colors.mutedInk, fontFamily: typography.body, fontSize: 14, lineHeight: 21, marginTop: spacing.sm },
   multiline: { minHeight: 96, textAlignVertical: 'top' },
   primary: { alignItems: 'center', backgroundColor: colors.plumInk, borderRadius: radii.md, justifyContent: 'center', marginTop: spacing.xl, minHeight: 54, paddingHorizontal: spacing.lg },
   primaryText: { color: colors.paper, fontSize: 15, fontWeight: '800' },
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
   sourceCard: { backgroundColor: colors.paper, borderColor: colors.keyline, borderRadius: radii.lg, borderWidth: 1, marginTop: spacing.xl, overflow: 'hidden', padding: spacing.lg },
   sourceImage: { borderRadius: radii.md, height: 180, marginTop: spacing.sm, width: '100%' },
   sourceLabel: { color: colors.rose, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-  title: { color: colors.plumInk, fontSize: 32, fontWeight: '800', letterSpacing: -1, marginTop: spacing.md },
+  title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 32, fontWeight: '800', letterSpacing: -1, marginTop: spacing.md },
   topRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   visibility: { backgroundColor: colors.paper, borderColor: colors.keyline, borderRadius: radii.md, borderWidth: 1, flex: 1, minHeight: 78, padding: spacing.md },
   visibilityCopy: { color: colors.mutedInk, fontSize: 11, lineHeight: 16, marginTop: 3 },

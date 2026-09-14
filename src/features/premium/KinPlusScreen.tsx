@@ -2,7 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenState } from '@/components/ScreenState';
-import { colors, radii, spacing } from '@/design/tokens';
+import { colors, radii, spacing, typography } from '@/design/tokens';
 import { usePremiumGate } from './usePremiumGate';
 
 export function KinPlusScreen({ onClose }: { onClose: () => void }) {
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   activeCard: { alignItems: 'center', backgroundColor: '#E4EFE9', borderColor: '#BCD3C6', borderRadius: radii.lg, borderWidth: 1, flexDirection: 'row', gap: spacing.md, marginTop: spacing.xxl, padding: spacing.xl },
   activeCopy: { color: colors.mutedInk, fontSize: 13, lineHeight: 19, marginTop: spacing.xs },
   activeMark: { color: colors.success, fontSize: 28, fontWeight: '900' },
-  activeTitle: { color: colors.plumInk, fontSize: 18, fontWeight: '800' },
+  activeTitle: { color: colors.plumInk, fontFamily: typography.display, fontSize: 18, fontWeight: '800' },
   close: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   closeText: { color: colors.plumInk, fontSize: 30 },
   content: { alignSelf: 'center', maxWidth: 620, padding: spacing.xl, paddingBottom: 72, width: '100%' },
@@ -90,9 +90,9 @@ const styles = StyleSheet.create({
   featureCopy: { flex: 1 },
   featureMark: { color: colors.rose, fontSize: 23, fontWeight: '900' },
   featureText: { color: colors.mutedInk, fontSize: 13, lineHeight: 19, marginTop: spacing.xs },
-  featureTitle: { color: colors.plumInk, fontSize: 18, fontWeight: '800' },
+  featureTitle: { color: colors.plumInk, fontFamily: typography.display, fontSize: 18, fontWeight: '800' },
   finePrint: { color: colors.mutedInk, fontSize: 11, lineHeight: 17, marginTop: spacing.xl, textAlign: 'center' },
-  intro: { color: colors.mutedInk, fontSize: 15, lineHeight: 23, marginTop: spacing.md },
+  intro: { color: colors.mutedInk, fontFamily: typography.body, fontSize: 15, lineHeight: 23, marginTop: spacing.md },
   package: { alignItems: 'center', backgroundColor: colors.plumInk, borderRadius: radii.lg, flexDirection: 'row', marginTop: spacing.md, minHeight: 72, padding: spacing.lg },
   packageArrow: { color: colors.paper, fontSize: 28 },
   packagePrice: { color: '#D9CDD3', fontSize: 12, marginTop: spacing.xs },
@@ -100,12 +100,12 @@ const styles = StyleSheet.create({
   restore: { alignItems: 'center', justifyContent: 'center', marginTop: spacing.xl, minHeight: 48 },
   restoreNotice: { color: colors.success, fontSize: 13, fontWeight: '700', marginTop: spacing.lg, textAlign: 'center' },
   restoreText: { color: colors.plumInk, fontSize: 14, fontWeight: '800', textDecorationLine: 'underline' },
-  retry: { minHeight: 40, justifyContent: 'center', paddingHorizontal: spacing.sm },
+  retry: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.sm },
   retryText: { color: colors.danger, fontSize: 13, fontWeight: '900' },
   screen: { backgroundColor: colors.parchment, flex: 1 },
-  title: { color: colors.plumInk, fontSize: 34, fontWeight: '800', letterSpacing: -1.1, lineHeight: 41, marginTop: spacing.md },
+  title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 34, fontWeight: '800', letterSpacing: -1.1, lineHeight: 41, marginTop: spacing.md },
   topBar: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.md },
   unavailable: { backgroundColor: colors.paper, borderColor: colors.keyline, borderRadius: radii.md, borderWidth: 1, marginTop: spacing.xl, padding: spacing.lg },
   unavailableTitle: { color: colors.plumInk, fontSize: 15, fontWeight: '800' },
-  wordmark: { color: colors.rose, fontSize: 16, fontWeight: '900' },
+  wordmark: { color: colors.rose, fontFamily: typography.display, fontSize: 16, fontWeight: '900' },
 });

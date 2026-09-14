@@ -22,5 +22,6 @@ it('keeps messaging familiar while relationship actions remain one level deeper'
   await user.press(screen.getByRole('button', { name: 'Relationship with Jamie' }));
 
   expect(screen.getByText('Saturday at seven?')).toBeTruthy();
+  expect(screen.getByText('Saturday sounds perfect. I’ll make it cozy.')).toBeTruthy();
   expect(onOpenRelationship).toHaveBeenCalledTimes(1);
 });

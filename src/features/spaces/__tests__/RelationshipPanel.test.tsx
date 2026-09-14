@@ -34,7 +34,7 @@ describe('RelationshipPanel', () => {
       'relationship-personalization',
       'relationship-kin-plus',
     ]);
-    expect(screen.getAllByText('Lanterns after the rain')).toHaveLength(2);
+    expect(screen.getAllByText('Noodles after the rain')).toHaveLength(2);
     expect(screen.getByText('Visit the new art museum')).toBeTruthy();
     expect(screen.queryByText(/score|declining|text less/i)).toBeNull();
   });

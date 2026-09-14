@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, radii, spacing } from '@/design/tokens';
+import { colors, radii, spacing, typography } from '@/design/tokens';
 import type { ISODate } from '@/domain/models';
 import { useKin } from '@/state/useKin';
 
@@ -153,7 +153,7 @@ function Field({
 
 const styles = StyleSheet.create({
   content: { flex: 1, justifyContent: 'center' },
-  copy: { color: colors.mutedInk, fontSize: 16, lineHeight: 24, marginTop: spacing.md },
+  copy: { color: colors.mutedInk, fontFamily: typography.body, fontSize: 16, lineHeight: 24, marginTop: spacing.md },
   disabled: { opacity: 0.5 },
   error: { color: colors.danger, fontSize: 14, lineHeight: 20, marginBottom: spacing.md },
   eyebrow: { color: colors.rose, fontSize: 12, fontWeight: '800', letterSpacing: 1.3, marginBottom: spacing.md },
@@ -191,5 +191,5 @@ const styles = StyleSheet.create({
   },
   primaryLabel: { color: colors.paper, fontSize: 16, fontWeight: '800' },
   screen: { backgroundColor: colors.parchment, flex: 1, paddingHorizontal: spacing.xl },
-  title: { color: colors.plumInk, fontSize: 34, fontWeight: '700', letterSpacing: -1, lineHeight: 40 },
+  title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 34, fontWeight: '700', letterSpacing: -1, lineHeight: 40 },
 });

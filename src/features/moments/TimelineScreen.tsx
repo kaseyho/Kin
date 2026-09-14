@@ -2,7 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenState } from '@/components/ScreenState';
-import { colors, spacing } from '@/design/tokens';
+import { colors, spacing, typography } from '@/design/tokens';
 import { selectTimeline } from '@/domain/selectors';
 import { useKin } from '@/state/useKin';
 import { MomentCard } from './MomentCard';
@@ -64,6 +64,6 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', borderBottomColor: colors.keyline, borderBottomWidth: 1, flexDirection: 'row', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   headingCopy: { flex: 1, marginLeft: spacing.sm },
   screen: { backgroundColor: colors.parchment, flex: 1 },
-  title: { color: colors.plumInk, fontSize: 25, fontWeight: '800', letterSpacing: -0.5 },
+  title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 25, fontWeight: '800', letterSpacing: -0.5 },
   year: { color: colors.plumInk, fontSize: 29, fontWeight: '800', letterSpacing: -0.7, marginTop: spacing.xl },
 });

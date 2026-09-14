@@ -12,6 +12,6 @@ it('surfaces one earlier-year match before recent memories without judgment lang
   );
 
   expect(await screen.findByText('On this day')).toBeTruthy();
-  expect(screen.getAllByText('Lanterns after the rain').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Noodles after the rain').length).toBeGreaterThan(0);
   expect(screen.queryByText(/you used to|text less|declining|score/i)).toBeNull();
 });

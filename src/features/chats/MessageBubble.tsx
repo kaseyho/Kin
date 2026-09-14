@@ -1,7 +1,8 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { KeptCorner } from '@/components/KeptCorner';
-import { colors, radii, spacing } from '@/design/tokens';
+import { kinImageSource } from '@/design/assets';
+import { colors, radii, spacing, typography } from '@/design/tokens';
 import type { Message } from '@/domain/models';
 
 interface MessageBubbleProps {
@@ -30,6 +31,14 @@ export function MessageBubble({
         : message.body;
   const labelSeparator = /[.!?]$/.test(contentLabel) ? ' ' : '. ';
   const accessibleMessage = `${mine ? 'Your message' : `Message from ${senderName}`}: ${contentLabel}${labelSeparator}Actions available`;
+  const webContextMenuProps = Platform.OS === 'web'
+    ? ({
+        onContextMenu: (event: { preventDefault: () => void }) => {
+          event.preventDefault();
+          onOpenActions();
+        },
+      } as object)
+    : {};
 
   return (
     <View style={[styles.row, mine ? styles.mineRow : styles.theirRow]}>
@@ -41,29 +50,31 @@ export function MessageBubble({
           if (event.nativeEvent.actionName === 'activate') onOpenActions();
         }}
         onLongPress={onOpenActions}
+        onPress={Platform.OS === 'web' ? onOpenActions : undefined}
         style={({ pressed }) => [
           styles.bubble,
           mine ? styles.mineBubble : styles.theirBubble,
           pressed && styles.pressed,
         ]}
+        {...webContextMenuProps}
       >
         {isRemembered ? <KeptCorner /> : null}
         {message.kind === 'image' && message.mediaUri ? (
-          <Image
-            accessibilityLabel={`Image message: ${contentLabel}`}
-            resizeMode="cover"
-            source={{ uri: message.mediaUri }}
-            style={styles.image}
-          />
+          <>
+            <Image
+              accessibilityLabel={`Image message: ${contentLabel}`}
+              resizeMode="cover"
+              source={kinImageSource(message.mediaUri)}
+              style={styles.image}
+            />
+            <Text style={[styles.imageCaption, mine && styles.mineBody]}>{message.body}</Text>
+          </>
         ) : message.kind === 'sticker' ? (
-          <View
+          <Image
             accessibilityLabel="Sticker message: Jamie cooking"
-            accessible
-            style={styles.sticker}
-          >
-            <Text style={styles.stickerEmoji}>🍳</Text>
-            <Text style={styles.stickerWord}>chef jamie</Text>
-          </View>
+            source={kinImageSource(message.mediaUri ?? 'asset://kin/sticker-jamie-chef')}
+            style={styles.stickerImage}
+          />
         ) : (
           <Text style={[styles.body, mine && styles.mineBody]}>{message.body}</Text>
         )}
@@ -115,9 +126,10 @@ function formatTime(value: string): string {
 }
 
 const styles = StyleSheet.create({
-  body: { color: colors.plumInk, fontSize: 16, lineHeight: 22 },
+  body: { color: colors.plumInk, fontFamily: typography.body, fontSize: 16, lineHeight: 22 },
   bubble: { maxWidth: '82%', overflow: 'hidden', padding: spacing.md },
   image: { backgroundColor: colors.keyline, borderRadius: radii.md, height: 190, width: 230 },
+  imageCaption: { color: colors.plumInk, fontFamily: typography.body, fontSize: 13, lineHeight: 18, marginTop: spacing.sm },
   metaRow: { alignItems: 'center', flexDirection: 'row', gap: 6, justifyContent: 'flex-end', marginTop: 5 },
   mineBody: { color: colors.paper },
   mineBubble: { backgroundColor: colors.plumInk, borderBottomRightRadius: 6, borderRadius: radii.lg },
@@ -136,12 +148,10 @@ const styles = StyleSheet.create({
   },
   reactionsMine: { marginRight: spacing.sm },
   reactionsTheirs: { marginLeft: spacing.sm },
-  retry: { minHeight: 34, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  retry: { minHeight: 44, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
   retryText: { color: colors.danger, fontSize: 12, fontWeight: '700' },
   row: { marginVertical: 4, width: '100%' },
-  sticker: { alignItems: 'center', minWidth: 120, padding: spacing.sm },
-  stickerEmoji: { fontSize: 52 },
-  stickerWord: { color: colors.paper, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  stickerImage: { height: 156, width: 156 },
   theirBubble: {
     backgroundColor: colors.paper,
     borderBottomLeftRadius: 6,

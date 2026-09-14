@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing } from '@/design/tokens';
+import { AccessibleSheet } from '@/components/AccessibleSheet';
+import { colors, spacing } from '@/design/tokens';
 import type { MemoryKind } from '@/domain/models';
 
 interface RememberSheetProps {
@@ -16,11 +17,13 @@ const choices: { kind: MemoryKind; title: string; copy: string }[] = [
 ];
 
 export function RememberSheet({ onClose, onSelect, visible }: RememberSheetProps) {
-  if (!visible) return null;
   return (
-    <View accessibilityViewIsModal style={styles.overlay}>
-      <Pressable accessibilityLabel="Close Remember this" onPress={onClose} style={styles.scrim} />
-      <View style={styles.sheet}>
+    <AccessibleSheet
+      closeLabel="Close Remember this"
+      label="Remember this"
+      onClose={onClose}
+      visible={visible}
+    >
         <Text style={styles.eyebrow}>REMEMBER THIS</Text>
         <Text accessibilityRole="header" style={styles.title}>What should this become?</Text>
         <Text style={styles.intro}>You choose what it means. Kin keeps the source with it.</Text>
@@ -39,8 +42,7 @@ export function RememberSheet({ onClose, onSelect, visible }: RememberSheetProps
             <Text style={styles.arrow}>›</Text>
           </Pressable>
         ))}
-      </View>
-    </View>
+    </AccessibleSheet>
   );
 }
 
@@ -52,9 +54,6 @@ const styles = StyleSheet.create({
   copy: { color: colors.mutedInk, fontSize: 13, marginTop: 3 },
   eyebrow: { color: colors.rose, fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
   intro: { color: colors.mutedInk, fontSize: 13, lineHeight: 19, marginBottom: spacing.xl, marginTop: spacing.sm },
-  overlay: { bottom: 0, justifyContent: 'flex-end', left: 0, position: 'absolute', right: 0, top: 0, zIndex: 30 },
   pressed: { opacity: 0.65 },
-  scrim: { backgroundColor: 'rgba(47,35,43,0.32)', bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
-  sheet: { backgroundColor: colors.paper, borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg, padding: spacing.xl, paddingBottom: spacing.xxl },
   title: { color: colors.plumInk, fontSize: 27, fontWeight: '800', letterSpacing: -0.7, marginTop: spacing.xs },
 });

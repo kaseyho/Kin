@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
 import { ScreenState } from '@/components/ScreenState';
-import { colors, radii, relationshipThemes, spacing } from '@/design/tokens';
+import { colors, radii, relationshipThemes, spacing, typography } from '@/design/tokens';
 import type { KinSpace, Message, UserProfile } from '@/domain/models';
 import { useKin } from '@/state/useKin';
 
@@ -120,7 +120,7 @@ function ChatRow({
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
-      <Avatar accent={theme.accent} name={profile?.displayName ?? name} size={54} />
+      <Avatar accent={theme.accent} name={profile?.displayName ?? name} size={54} uri={profile?.avatarUri} />
       <View style={styles.rowBody}>
         <View style={styles.rowTop}>
           <Text numberOfLines={1} style={styles.rowName}>{name}</Text>
@@ -189,12 +189,12 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   rowBody: { flex: 1 },
-  rowName: { color: colors.plumInk, flex: 1, fontSize: 17, fontWeight: '800' },
+  rowName: { color: colors.plumInk, flex: 1, fontFamily: typography.bodyStrong, fontSize: 17, fontWeight: '800' },
   rowPressed: { opacity: 0.72, transform: [{ scale: 0.995 }] },
   rowTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   screen: { backgroundColor: colors.parchment, flex: 1 },
   sectionLabel: { color: colors.rose, fontSize: 11, fontWeight: '800', letterSpacing: 1.25 },
   time: { color: colors.mutedInk, fontSize: 11 },
-  title: { color: colors.plumInk, fontSize: 38, fontWeight: '800', letterSpacing: -1.2 },
-  wordmark: { color: colors.rose, fontSize: 15, fontWeight: '900', letterSpacing: -0.5 },
+  title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 38, fontWeight: '800', letterSpacing: -1.2 },
+  wordmark: { color: colors.rose, fontFamily: typography.display, fontSize: 15, fontWeight: '900', letterSpacing: -0.5 },
 });

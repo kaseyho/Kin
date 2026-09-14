@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.round,
     height: 44,
     justifyContent: 'center',
-    width: 40,
+    width: 44,
   },
   input: {
     backgroundColor: colors.paper,

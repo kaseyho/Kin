@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing } from '@/design/tokens';
+import { colors, radii, spacing, typography } from '@/design/tokens';
 import type { MemoryItem } from '@/domain/models';
 
 interface OnThisDayCardProps {
@@ -29,6 +29,6 @@ const styles = StyleSheet.create({
   headingRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   note: { color: colors.mutedInk, fontSize: 14, lineHeight: 21, marginTop: spacing.sm },
   source: { color: colors.rose, fontSize: 11, fontWeight: '700', marginTop: spacing.lg },
-  title: { color: colors.plumInk, fontSize: 24, fontWeight: '800', letterSpacing: -0.5, marginTop: spacing.md },
+  title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 24, fontWeight: '800', letterSpacing: -0.5, marginTop: spacing.md },
   year: { color: colors.mutedInk, fontSize: 11 },
 });

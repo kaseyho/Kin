@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, radii, spacing } from '@/design/tokens';
+import { colors, radii, spacing, typography } from '@/design/tokens';
 import { useKin } from '@/state/useKin';
 
 type OnboardingStep = 'promise' | 'meaning' | 'profile';
@@ -35,7 +35,10 @@ export function OnboardingScreen({ onComplete, onTryDemo }: OnboardingScreenProp
     setSaving(true);
     setError('');
     try {
-      await kin.saveProfile({ displayName: name, avatarUri: 'asset://kin/maya' });
+      await kin.saveProfile({
+        displayName: name,
+        avatarUri: kin.mode === 'demo' ? 'asset://kin/maya' : '',
+      });
       onComplete();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Kin could not save your profile.');
@@ -167,8 +170,8 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.5 },
   error: { color: colors.danger, fontSize: 13, marginTop: spacing.sm },
   fieldGroup: { marginVertical: spacing.xxl },
-  heroCopy: { color: colors.mutedInk, fontSize: 17, lineHeight: 26, marginTop: spacing.md },
-  heroTitle: { color: colors.plumInk, fontSize: 37, fontWeight: '700', letterSpacing: -1.2, lineHeight: 43 },
+  heroCopy: { color: colors.mutedInk, fontFamily: typography.body, fontSize: 17, lineHeight: 26, marginTop: spacing.md },
+  heroTitle: { color: colors.plumInk, fontFamily: typography.display, fontSize: 37, fontWeight: '700', letterSpacing: -1.2, lineHeight: 43 },
   input: {
     backgroundColor: colors.paper,
     borderColor: colors.keyline,
@@ -204,7 +207,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-1.5deg' }],
   },
   memoryQuote: { color: colors.mutedInk, fontSize: 15, fontStyle: 'italic', lineHeight: 22, marginTop: spacing.lg },
-  memoryTitle: { color: colors.plumInk, fontSize: 25, fontWeight: '700', marginTop: spacing.sm },
+  memoryTitle: { color: colors.plumInk, fontFamily: typography.display, fontSize: 25, fontWeight: '700', marginTop: spacing.sm },
   pressed: { opacity: 0.72 },
   primaryButton: {
     alignItems: 'center',
@@ -221,6 +224,6 @@ const styles = StyleSheet.create({
   tagline: { color: colors.mutedInk, fontSize: 14, marginLeft: spacing.sm },
   textButton: { alignItems: 'center', justifyContent: 'center', minHeight: 48 },
   textButtonLabel: { color: colors.plumInk, fontSize: 14, fontWeight: '700' },
-  wordmark: { color: colors.plumInk, fontSize: 30, fontWeight: '900', letterSpacing: -1.5 },
+  wordmark: { color: colors.plumInk, fontFamily: typography.display, fontSize: 30, fontWeight: '900', letterSpacing: -1.5 },
   wordmarkWrap: { alignItems: 'baseline', flexDirection: 'row', marginTop: spacing.xl },
 });

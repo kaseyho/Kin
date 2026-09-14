@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { InlineNotice } from '@/components/InlineNotice';
 import { ScreenState } from '@/components/ScreenState';
-import { colors, relationshipThemes, spacing } from '@/design/tokens';
+import { kinWallpaperSource } from '@/design/assets';
+import { colors, relationshipThemes, spacing, typography } from '@/design/tokens';
 import type { MemoryKind } from '@/domain/models';
 import { MemoryEditorScreen } from '@/features/moments/MemoryEditorScreen';
 import { RememberSheet } from '@/features/moments/RememberSheet';
 import type { MediaPicker } from '@/services/media/contracts';
+import { MediaPermissionError } from '@/services/media/contracts';
 import { useKin } from '@/state/useKin';
 import { Composer } from './Composer';
 import { MessageActionSheet } from './MessageActionSheet';
@@ -37,6 +40,7 @@ export function ChatScreen({
   const [rememberMessageId, setRememberMessageId] = useState<string | null>(null);
   const [rememberKind, setRememberKind] = useState<MemoryKind | null>(null);
   const [notice, setNotice] = useState('');
+  const [noticeAction, setNoticeAction] = useState<null | { label: string; onPress: () => void }>(null);
 
   if (kin.status === 'loading') return <ScreenState message="Opening your conversation…" title="Jamie" />;
   const snapshot = kin.snapshot;
@@ -55,12 +59,14 @@ export function ChatScreen({
     relationshipThemes.find((item) => item.id === space.preferencesByUser[currentUserId]?.themeId) ??
     relationshipThemes[0];
   const messages = snapshot.messages.filter((message) => message.spaceId === spaceId);
+  const wallpaperSource = kinWallpaperSource(space.preferencesByUser[currentUserId]?.wallpaperId);
 
   async function sendText() {
     const body = text.trim();
     if (!body) return;
     setText('');
     setNotice('');
+    setNoticeAction(null);
     try {
       await kin.sendMessage({ spaceId, kind: 'text', body });
     } catch (reason) {
@@ -71,6 +77,7 @@ export function ChatScreen({
 
   async function sendPhoto() {
     setNotice('');
+    setNoticeAction(null);
     try {
       const image = await mediaPicker.pickImage();
       if (!image) return;
@@ -82,6 +89,9 @@ export function ChatScreen({
       });
     } catch (reason) {
       setNotice(reason instanceof Error ? reason.message : 'Kin could not open that photo.');
+      if (reason instanceof MediaPermissionError) {
+        setNoticeAction({ label: 'Open settings', onPress: () => void Linking.openSettings() });
+      }
     }
   }
 
@@ -120,8 +130,18 @@ export function ChatScreen({
       style={[styles.screen, { backgroundColor: theme.wallpaper }]}
       testID="chat-wallpaper"
     >
+      {wallpaperSource ? (
+        <View pointerEvents="none" style={styles.wallpaperLayer}>
+          <Image
+            accessible={false}
+            resizeMode="cover"
+            source={wallpaperSource}
+            style={styles.wallpaperImage}
+          />
+        </View>
+      ) : null}
       <View style={styles.header}>
-        <Avatar accent={theme.accent} name={partnerName} size={42} />
+        <Avatar accent={theme.accent} name={partnerName} size={42} uri={partner?.avatarUri} />
         <View style={styles.identity}>
           <Text style={styles.name}>{partnerName}</Text>
           <Text style={styles.status}>your Kin Space</Text>
@@ -144,7 +164,15 @@ export function ChatScreen({
           partnerName={partnerName}
           rememberedMessageIds={new Set(snapshot.memories.flatMap((memory) => memory.sourceMessageIds))}
         />
-        {notice ? <Text accessibilityRole="alert" style={styles.notice}>{notice}</Text> : null}
+        {notice ? (
+          <View style={styles.noticeWrap}>
+            <InlineNotice
+              actionLabel={noticeAction?.label}
+              message={notice}
+              onAction={noticeAction?.onPress}
+            />
+          </View>
+        ) : null}
         <Composer
           onChangeText={setText}
           onPhoto={() => void sendPhoto()}
@@ -197,17 +225,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   identity: { flex: 1, marginLeft: spacing.md },
-  name: { color: colors.plumInk, fontSize: 17, fontWeight: '800' },
-  notice: {
-    backgroundColor: '#FBE9E8',
-    color: colors.danger,
-    fontSize: 13,
-    lineHeight: 19,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
+  name: { color: colors.plumInk, fontFamily: typography.bodyStrong, fontSize: 17, fontWeight: '800' },
+  noticeWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.sm },
   relationshipButton: { alignItems: 'center', height: 44, justifyContent: 'center', width: 44 },
   relationshipGlyph: { fontSize: 28, fontWeight: '800' },
   screen: { flex: 1 },
   status: { color: colors.mutedInk, fontSize: 11, marginTop: 2 },
+  wallpaperImage: { height: '100%', opacity: 0.34, width: '100%' },
+  wallpaperLayer: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
 });

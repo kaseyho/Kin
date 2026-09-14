@@ -9,6 +9,13 @@ export const colors = {
   success: '#477763',
 } as const;
 
+export const typography = {
+  body: 'Manrope_400Regular',
+  bodyStrong: 'Manrope_700Bold',
+  display: 'Fraunces_700Bold',
+  label: 'Manrope_800ExtraBold',
+} as const;
+
 export const spacing = {
   xs: 4,
   sm: 8,

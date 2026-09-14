@@ -45,13 +45,13 @@ describe('relationship memories', () => {
       repository,
     );
 
-    expect(await screen.findByText('The lantern street we found')).toBeTruthy();
+    expect(await screen.findByText('The noodle place we found after the rain')).toBeTruthy();
     expect(screen.getByText('Shared with Jamie')).toBeTruthy();
     await user.press(screen.getByRole('button', { name: 'Edit this Moment' }));
     await user.clear(screen.getByLabelText('Title'));
-    await user.type(screen.getByLabelText('Title'), 'Lantern street, after rain');
+    await user.type(screen.getByLabelText('Title'), 'Noodle place, after rain');
     await user.press(screen.getByRole('button', { name: 'Save Moment changes' }));
-    expect(await screen.findByText('Lantern street, after rain')).toBeTruthy();
+    expect(await screen.findByText('Noodle place, after rain')).toBeTruthy();
 
     await user.press(screen.getByRole('button', { name: 'Delete this Moment' }));
     await user.type(screen.getByLabelText('Type DELETE to confirm'), 'DELETE');

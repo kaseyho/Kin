@@ -1,6 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing } from '@/design/tokens';
+import { kinImageSource } from '@/design/assets';
+import { colors, radii, spacing, typography } from '@/design/tokens';
 import type { MemoryItem } from '@/domain/models';
 
 interface MomentCardProps {
@@ -21,7 +22,7 @@ export function MomentCard({ memory, onOpen, sourceExcerpt, testID }: MomentCard
     >
       <View style={styles.keptCorner} />
       <Text style={styles.kind}>{kindLabel(memory.kind)}</Text>
-      {memory.mediaUris[0] ? <Image accessibilityLabel={`Memory image: ${memory.title}`} source={{ uri: memory.mediaUris[0] }} style={styles.image} /> : null}
+      {memory.mediaUris[0] ? <Image accessibilityLabel={`Memory image: ${memory.title}`} source={kinImageSource(memory.mediaUris[0])} style={styles.image} /> : null}
       <Text style={styles.title}>{memory.title}</Text>
       {memory.note ? <Text numberOfLines={3} style={styles.note}>{memory.note}</Text> : null}
       {sourceExcerpt ? <Text numberOfLines={2} style={styles.source}>From: “{sourceExcerpt}”</Text> : null}
@@ -50,5 +51,5 @@ const styles = StyleSheet.create({
   note: { color: colors.mutedInk, fontSize: 14, lineHeight: 21, marginTop: spacing.sm },
   pressed: { opacity: 0.72 },
   source: { borderTopColor: colors.keyline, borderTopWidth: 1, color: colors.mutedInk, fontSize: 12, fontStyle: 'italic', lineHeight: 18, marginTop: spacing.md, paddingTop: spacing.md },
-  title: { color: colors.plumInk, fontSize: 21, fontWeight: '800', letterSpacing: -0.4, marginTop: spacing.sm },
+  title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 21, fontWeight: '800', letterSpacing: -0.4, marginTop: spacing.sm },
 });

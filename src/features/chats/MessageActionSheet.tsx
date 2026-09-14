@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AccessibleSheet } from '@/components/AccessibleSheet';
 import { colors, radii, spacing } from '@/design/tokens';
 
 interface MessageActionSheetProps {
@@ -15,11 +16,13 @@ export function MessageActionSheet({
   onRemember,
   visible,
 }: MessageActionSheetProps) {
-  if (!visible) return null;
   return (
-    <View accessibilityViewIsModal style={styles.overlay}>
-      <Pressable accessibilityLabel="Close message actions" onPress={onClose} style={styles.scrim} />
-      <View style={styles.sheet}>
+    <AccessibleSheet
+      closeLabel="Close message actions"
+      label="Message actions"
+      onClose={onClose}
+      visible={visible}
+    >
         <Text style={styles.eyebrow}>THIS MESSAGE</Text>
         <View style={styles.reactionRow}>
           <Action label="React with heart" onPress={() => onReact('❤️')} visual="❤️" />
@@ -38,8 +41,7 @@ export function MessageActionSheet({
           </View>
           <Text style={styles.arrow}>↗</Text>
         </Pressable>
-      </View>
-    </View>
+    </AccessibleSheet>
   );
 }
 
@@ -59,15 +61,6 @@ function Action({ label, onPress, visual }: { label: string; onPress: () => void
 const styles = StyleSheet.create({
   arrow: { color: colors.rose, fontSize: 24 },
   eyebrow: { color: colors.mutedInk, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
-  overlay: {
-    bottom: 0,
-    justifyContent: 'flex-end',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    zIndex: 20,
-  },
   pressed: { opacity: 0.65 },
   reactionButton: {
     alignItems: 'center',
@@ -91,19 +84,4 @@ const styles = StyleSheet.create({
   },
   rememberCopy: { color: colors.mutedInk, fontSize: 13, marginTop: 3 },
   rememberTitle: { color: colors.plumInk, fontSize: 16, fontWeight: '800' },
-  scrim: {
-    backgroundColor: 'rgba(47,35,43,0.30)',
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  sheet: {
-    backgroundColor: colors.paper,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: spacing.xl,
-    paddingBottom: spacing.xxl,
-  },
 });

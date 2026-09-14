@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing } from '@/design/tokens';
+import { colors, radii, spacing, typography } from '@/design/tokens';
 
 interface ScreenStateProps {
   eyebrow?: string;
@@ -53,6 +53,7 @@ const styles = StyleSheet.create({
   },
   message: {
     color: colors.mutedInk,
+    fontFamily: typography.body,
     fontSize: 16,
     lineHeight: 24,
     marginTop: spacing.md,
@@ -60,5 +61,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   pressed: { opacity: 0.72 },
-  title: { color: colors.plumInk, fontSize: 28, fontWeight: '700', textAlign: 'center' },
+  title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 28, fontWeight: '700', textAlign: 'center' },
 });
