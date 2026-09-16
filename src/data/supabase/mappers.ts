@@ -29,6 +29,7 @@ export interface MemberRow {
   role: 'owner' | 'member';
   joined_at: string;
   archived: boolean;
+  left_at?: string | null;
 }
 
 export interface ThemeRow {

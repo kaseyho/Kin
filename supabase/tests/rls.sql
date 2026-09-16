@@ -1,5 +1,8 @@
 begin;
 
+create extension if not exists pgtap with schema extensions;
+select plan(2);
+
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
@@ -55,6 +58,7 @@ begin
   end if;
 end;
 $$;
+select pass('creator RLS exposes joined Spaces and creator-visible memories');
 
 reset role;
 set local role authenticated;
@@ -77,5 +81,8 @@ begin
 end;
 $$;
 
+select pass('member RLS hides unrelated messages and another creator private memory');
+
 reset role;
+select * from finish();
 rollback;

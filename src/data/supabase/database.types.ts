@@ -31,6 +31,23 @@ export interface Database {
       memory_items: Table<MemoryRow>;
       memory_item_messages: Table<MemoryMessageRow>;
       space_invites: Table<InviteRow & { created_by: string }>;
+      user_blocks: Table<{
+        blocker_id: string;
+        blocked_id: string;
+        space_id: string | null;
+        created_at: string;
+      }>;
+      content_reports: Table<{
+        id: string;
+        reporter_id: string;
+        reported_user_id: string | null;
+        space_id: string | null;
+        message_id: string | null;
+        category: string;
+        explanation: string;
+        status: 'open' | 'reviewing' | 'resolved' | 'dismissed';
+        created_at: string;
+      }>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -69,7 +86,7 @@ export interface Database {
           report_category: string;
           report_explanation: string;
         };
-        Returns: { id: string; created_at: string };
+        Returns: string;
       };
     };
     Enums: Record<string, never>;

@@ -54,7 +54,7 @@ class SupabaseKinRepository implements KinRepository {
     assertResult(ownProfileResult.error, 'load_failed', 'Kin could not load your profile.', 'reconnect');
     const ownProfileRows = (ownProfileResult.data ?? []) as ProfileRow[];
 
-    const membershipResult = await this.client.from('kin_space_members').select('*').eq('user_id', userId);
+    const membershipResult = await this.client.from('kin_space_members').select('*').eq('user_id', userId).is('left_at', null);
     assertResult(membershipResult.error, 'load_failed', 'Kin could not load your Spaces.', 'reconnect');
     const ownMemberships = (membershipResult.data ?? []) as MemberRow[];
     const spaceIds = ownMemberships.map((item) => item.space_id);
@@ -76,7 +76,7 @@ class SupabaseKinRepository implements KinRepository {
     const [spacesResult, membersResult, themesResult, messagesResult, memoriesResult, invitesResult] =
       await Promise.all([
         this.client.from('kin_spaces').select('*').in('id', spaceIds),
-        this.client.from('kin_space_members').select('*').in('space_id', spaceIds),
+        this.client.from('kin_space_members').select('*').in('space_id', spaceIds).is('left_at', null),
         this.client.from('space_themes').select('*').in('space_id', spaceIds),
         this.client.from('messages').select('*').in('space_id', spaceIds).order('created_at'),
         this.client.from('memory_items').select('*').in('space_id', spaceIds).order('occurred_on'),

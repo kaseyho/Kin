@@ -46,3 +46,24 @@ jobs:
           path: output/playwright/
           if-no-files-found: ignore
           retention-days: 7
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: 2.117.0
+          github-token: ${{ github.token }}
+
+      - name: Reset and verify database
+        run: npm run test:database
