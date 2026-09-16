@@ -63,6 +63,8 @@ function AuthenticatedApp({
   const auth = useAuth();
   const kinActive = auth.state.status === 'demo' || auth.state.status === 'signed-in';
   const kinSessionKey = auth.state.status === 'signed-in' ? auth.state.user.id : auth.state.status;
+  const productAvailable = auth.state.status === 'demo' || auth.state.status === 'signed-in';
+  const authAvailable = auth.state.status === 'signed-out';
 
   return (
     <PremiumProvider service={readyRuntime.premiumService}>
@@ -74,7 +76,22 @@ function AuthenticatedApp({
             contentStyle: { backgroundColor: colors.parchment },
             headerShown: false,
           }}
-        />
+        >
+          <Stack.Screen name="index" />
+          <Stack.Protected guard={authAvailable}>
+            <Stack.Screen name="auth" />
+          </Stack.Protected>
+          <Stack.Protected guard={productAvailable}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="kin-plus" />
+            <Stack.Screen name="moment/[momentId]" />
+            <Stack.Screen name="space/new" />
+            <Stack.Screen name="space/[spaceId]" />
+            <Stack.Screen name="space/[spaceId]/relationship" />
+            <Stack.Screen name="space/[spaceId]/timeline" />
+          </Stack.Protected>
+        </Stack>
       </KinProvider>
     </PremiumProvider>
   );

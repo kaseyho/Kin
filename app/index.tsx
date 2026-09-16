@@ -1,11 +1,14 @@
-import { Redirect, useLocalSearchParams } from 'expo-router';
+import { Redirect, type Href, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
 import { ScreenState } from '@/components/ScreenState';
 import { readDemoDate } from '@/config/demoDate';
+import { resolveEntryRoute } from '@/navigation/resolveEntryRoute';
+import { useAuth } from '@/state/useAuth';
 import { useKin } from '@/state/useKin';
 
 export default function IndexRoute() {
+  const auth = useAuth();
   const kin = useKin();
   const params = useLocalSearchParams<{ demo?: string; demoDate?: string }>();
   const demoDate = readDemoDate(params.demoDate);
@@ -24,13 +27,19 @@ export default function IndexRoute() {
     }
   }, [kin, params.demo]);
 
+  const entryRoute = resolveEntryRoute({
+    authState: auth.state,
+    kinStatus: kin.status,
+    snapshot: kin.snapshot,
+  });
+
   if (
-    kin.status === 'loading'
+    entryRoute === 'loading'
     || (kin.mode === 'demo' && params.demo === 'story' && !kin.snapshot?.currentUserId)
   ) {
     return <ScreenState message="Bringing your people close…" title="Opening Kin" />;
   }
-  if (!kin.snapshot?.currentUserId) return <Redirect href="/onboarding" />;
+  if (entryRoute !== '/(tabs)/chats') return <Redirect href={entryRoute as Href} />;
   return (
     <Redirect
       href={demoDate
