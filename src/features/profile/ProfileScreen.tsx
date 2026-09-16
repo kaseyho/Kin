@@ -1,17 +1,22 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radii, spacing, typography } from '@/design/tokens';
 import { usePremiumGate } from '@/features/premium/usePremiumGate';
 import { useKin } from '@/state/useKin';
+import { AccountActions } from './AccountActions';
+import { EditProfileSheet } from './EditProfileSheet';
 
 interface ProfileScreenProps {
   onOpenKinPlus: () => void;
+  onSignedOut: () => void;
 }
 
-export function ProfileScreen({ onOpenKinPlus }: ProfileScreenProps) {
+export function ProfileScreen({ onOpenKinPlus, onSignedOut }: ProfileScreenProps) {
   const kin = useKin();
   const premium = usePremiumGate();
+  const [editing, setEditing] = useState(false);
   const snapshot = kin.snapshot;
   const userId = snapshot?.currentUserId;
   const profile = snapshot?.profiles.find((item) => item.id === userId);
@@ -22,7 +27,19 @@ export function ProfileScreen({ onOpenKinPlus }: ProfileScreenProps) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.wordmark}>kin</Text>
         <Text accessibilityRole="header" style={styles.title}>Profile</Text>
-        <Text style={styles.name}>{profile?.displayName ?? 'Your profile'}</Text>
+        <View style={styles.identityRow}>
+          <Text style={styles.name}>{profile?.displayName ?? 'Your profile'}</Text>
+          {profile ? (
+            <Pressable
+              accessibilityLabel="Edit profile"
+              accessibilityRole="button"
+              onPress={() => setEditing(true)}
+              style={({ pressed }) => [styles.editButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.editButtonLabel}>Edit profile</Text>
+            </Pressable>
+          ) : null}
+        </View>
 
         <Pressable accessibilityLabel="Open Kin+" accessibilityRole="button" onPress={onOpenKinPlus} style={styles.plus}>
           <Text style={styles.plusMark}>KIN+</Text>
@@ -60,7 +77,20 @@ export function ProfileScreen({ onOpenKinPlus }: ProfileScreenProps) {
             );
           })}
         </View>
+
+        <AccountActions
+          mode={kin.mode}
+          onResetDemo={kin.resetDemo}
+          onSignedOut={onSignedOut}
+        />
       </ScrollView>
+      {editing && profile ? (
+        <EditProfileSheet
+          onClose={() => setEditing(false)}
+          profile={profile}
+          visible
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -68,12 +98,16 @@ export function ProfileScreen({ onOpenKinPlus }: ProfileScreenProps) {
 const styles = StyleSheet.create({
   content: { padding: spacing.xl, paddingBottom: 100 },
   copy: { color: colors.mutedInk, fontFamily: typography.body, fontSize: 14, lineHeight: 21, marginTop: spacing.sm },
+  editButton: { alignItems: 'center', justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.sm },
+  editButtonLabel: { color: colors.rose, fontFamily: typography.bodyStrong, fontSize: 13 },
+  identityRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   label: { color: colors.rose, fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
   name: { color: colors.mutedInk, fontSize: 15, marginTop: spacing.xs },
   plus: { backgroundColor: colors.plumInk, borderRadius: radii.lg, marginTop: spacing.xl, padding: spacing.xl },
   plusMark: { color: '#E8A6B9', fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
   plusTitle: { color: colors.paper, fontSize: 20, fontWeight: '800', lineHeight: 26, marginTop: spacing.md },
   plusStatus: { color: '#D9CDD3', fontSize: 12, marginTop: spacing.sm },
+  pressed: { opacity: 0.68 },
   restore: { alignItems: 'center', backgroundColor: colors.paper, borderColor: colors.keyline, borderRadius: radii.md, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md, minHeight: 54, paddingHorizontal: spacing.md },
   restoreAction: { color: colors.rose, fontSize: 13, fontWeight: '800' },
   restoreName: { color: colors.plumInk, fontSize: 15, fontWeight: '800' },

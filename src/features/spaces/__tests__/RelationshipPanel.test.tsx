@@ -1,5 +1,6 @@
 import { screen, userEvent } from '@testing-library/react-native';
 
+import { AuthContext, type AuthContextValue } from '@/state/AuthProvider';
 import { createTestRepository, renderKin } from '../../../../tests/helpers/renderKin';
 import { ChatListScreen } from '../../chats/ChatListScreen';
 import { ProfileScreen } from '../../profile/ProfileScreen';
@@ -63,7 +64,18 @@ describe('RelationshipPanel', () => {
     expect(await screen.findByText('A space for the people who matter.')).toBeTruthy();
     await chats.unmount();
 
-    const profile = await renderKin(<ProfileScreen onOpenKinPlus={jest.fn()} />, repository);
+    const auth: AuthContextValue = {
+      requestOtp: async () => undefined,
+      signOut: async () => undefined,
+      state: { status: 'demo' },
+      verifyOtp: async (email) => ({ email, id: 'demo' }),
+    };
+    const profile = await renderKin(
+      <AuthContext.Provider value={auth}>
+        <ProfileScreen onOpenKinPlus={jest.fn()} onSignedOut={jest.fn()} />
+      </AuthContext.Provider>,
+      repository,
+    );
     await user.press(await screen.findByRole('button', { name: 'Restore Kin Space with Jamie' }));
     await profile.unmount();
     await renderKin(<ChatListScreen onNewSpace={jest.fn()} onOpenSpace={jest.fn()} />, repository);
