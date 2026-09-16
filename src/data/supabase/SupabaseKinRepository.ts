@@ -16,6 +16,7 @@ import type {
 import { RepositoryError, type RepositoryErrorCode } from '../errors';
 import type { Database } from './database.types';
 import { resolveKinMedia, uploadKinMedia } from './media';
+import { requireAuthenticatedUserId } from './requireAuthenticatedUser';
 import {
   mapMember,
   mapMemory,
@@ -390,13 +391,7 @@ class SupabaseKinRepository implements KinRepository {
   }
 
   private async ensureUserId(): Promise<string> {
-    const current = await this.client.auth.getUser();
-    if (current.data.user) return current.data.user.id;
-    const anonymous = await this.client.auth.signInAnonymously();
-    if (anonymous.error || !anonymous.data.user) {
-      throw new RepositoryError('auth_required', 'Sign in to use connected Kin.', 'reconnect');
-    }
-    return anonymous.data.user.id;
+    return requireAuthenticatedUserId(this.client.auth);
   }
 
   private setCachedMessage(message: Message) {
