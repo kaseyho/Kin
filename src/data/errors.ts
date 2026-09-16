@@ -3,12 +3,20 @@ export type RepositoryErrorCode =
   | 'confirmation_required'
   | 'demo_snapshot_corrupt'
   | 'forbidden'
+  | 'blocked'
+  | 'already_member'
+  | 'invite_expired'
   | 'invite_invalid'
+  | 'invite_revoked'
+  | 'invite_self'
+  | 'invite_used'
   | 'load_failed'
   | 'message_invalid'
   | 'not_found'
   | 'profile_required'
+  | 'report_invalid'
   | 'save_failed'
+  | 'space_full'
   | 'unavailable';
 
 export class RepositoryError extends Error {

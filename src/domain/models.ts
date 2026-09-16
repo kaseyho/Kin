@@ -5,6 +5,23 @@ export type MemoryKind = 'moment' | 'important_date' | 'plan';
 export type MemoryVisibility = 'private' | 'shared';
 export type MessageKind = 'text' | 'image' | 'sticker';
 export type DeliveryState = 'sending' | 'sent' | 'failed';
+export type InvitationStatus = 'active' | 'expired' | 'revoked' | 'used';
+
+export const CONTENT_REPORT_CATEGORIES = [
+  'harassment',
+  'threats',
+  'hate',
+  'sexual_content',
+  'spam',
+  'other',
+] as const;
+
+export type ContentReportCategory = typeof CONTENT_REPORT_CATEGORIES[number];
+
+export function isContentReportCategory(value: unknown): value is ContentReportCategory {
+  return typeof value === 'string'
+    && (CONTENT_REPORT_CATEGORIES as readonly string[]).includes(value);
+}
 
 export interface UserProfile {
   id: Id;
@@ -19,15 +36,35 @@ export interface RelationshipPreferences {
   wallpaperId: string;
 }
 
+export interface SpaceInvitation {
+  id: Id;
+  spaceId: Id;
+  code: string;
+  createdAt: ISODateTime;
+  expiresAt: ISODateTime;
+  revokedAt?: ISODateTime;
+  redeemedBy?: Id;
+  useCount: number;
+  maxUses: number;
+  status: InvitationStatus;
+}
+
 export interface KinSpace {
   id: Id;
   createdBy: Id;
   inviteCode: string;
+  activeInvitation?: SpaceInvitation;
   createdAt: ISODateTime;
   relationshipStartDate?: ISODate;
   preferencesByUser: Record<Id, RelationshipPreferences>;
   archivedByUserIds: Id[];
   stickerIds: Id[];
+}
+
+export interface ContentReportReceipt {
+  id: Id;
+  createdAt: ISODateTime;
+  status: 'submitted';
 }
 
 export interface SpaceMember {

@@ -80,7 +80,7 @@ class SupabaseKinRepository implements KinRepository {
         this.client.from('space_themes').select('*').in('space_id', spaceIds),
         this.client.from('messages').select('*').in('space_id', spaceIds).order('created_at'),
         this.client.from('memory_items').select('*').in('space_id', spaceIds).order('occurred_on'),
-        this.client.from('space_invites').select('space_id,code').in('space_id', spaceIds).order('created_at', { ascending: false }),
+        this.client.from('space_invites').select('*').in('space_id', spaceIds).order('created_at', { ascending: false }),
       ]);
     for (const result of [spacesResult, membersResult, themesResult, messagesResult, memoriesResult, invitesResult]) {
       assertResult(result.error, 'load_failed', 'Kin could not finish loading this relationship.', 'reconnect');

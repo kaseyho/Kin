@@ -30,7 +30,7 @@ export interface Database {
       message_reactions: Table<ReactionRow>;
       memory_items: Table<MemoryRow>;
       memory_item_messages: Table<MemoryMessageRow>;
-      space_invites: Table<InviteRow & { id: string; created_by: string; created_at: string; expires_at: string; max_uses: number; use_count: number }>;
+      space_invites: Table<InviteRow & { created_by: string }>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -41,6 +41,35 @@ export interface Database {
       redeem_space_invite: {
         Args: { invite_code: string };
         Returns: string;
+      };
+      create_kin_space: {
+        Args: { other_display_name: string; relationship_start_date: string | null };
+        Returns: string;
+      };
+      rotate_space_invite: {
+        Args: { target_space_id: string };
+        Returns: InviteRow;
+      };
+      revoke_space_invite: {
+        Args: { target_space_id: string };
+        Returns: InviteRow;
+      };
+      leave_kin_space: {
+        Args: { target_space_id: string };
+        Returns: undefined;
+      };
+      block_kin_space_member: {
+        Args: { target_space_id: string };
+        Returns: undefined;
+      };
+      submit_content_report: {
+        Args: {
+          target_space_id: string;
+          target_message_id: string | null;
+          report_category: string;
+          report_explanation: string;
+        };
+        Returns: { id: string; created_at: string };
       };
     };
     Enums: Record<string, never>;

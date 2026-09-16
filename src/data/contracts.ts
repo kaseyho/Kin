@@ -1,6 +1,8 @@
 import type {
   Id,
   ISODate,
+  ContentReportCategory,
+  ContentReportReceipt,
   KinSnapshot,
   KinSpace,
   MemoryItem,
@@ -8,6 +10,7 @@ import type {
   MemoryVisibility,
   Message,
   MessageKind,
+  SpaceInvitation,
   UserProfile,
 } from '@/domain/models';
 
@@ -29,6 +32,29 @@ export interface CreateSpaceInput {
 
 export interface JoinSpaceInput {
   inviteCode: string;
+}
+
+export interface RotateSpaceInviteInput {
+  spaceId: Id;
+}
+
+export interface RevokeSpaceInviteInput {
+  spaceId: Id;
+}
+
+export interface LeaveSpaceInput {
+  spaceId: Id;
+}
+
+export interface BlockSpaceMemberInput {
+  spaceId: Id;
+}
+
+export interface SubmitContentReportInput {
+  spaceId: Id;
+  messageId?: Id;
+  category: ContentReportCategory;
+  explanation?: string;
 }
 
 export interface SendMessageInput {
@@ -80,6 +106,11 @@ export interface KinRepository {
   saveProfile(input: SaveProfileInput): Promise<UserProfile>;
   createSpace(input: CreateSpaceInput): Promise<KinSpace>;
   joinSpace(input: JoinSpaceInput): Promise<KinSpace>;
+  rotateSpaceInvite?(input: RotateSpaceInviteInput): Promise<SpaceInvitation>;
+  revokeSpaceInvite?(input: RevokeSpaceInviteInput): Promise<SpaceInvitation>;
+  leaveSpace?(input: LeaveSpaceInput): Promise<void>;
+  blockSpaceMember?(input: BlockSpaceMemberInput): Promise<void>;
+  submitContentReport?(input: SubmitContentReportInput): Promise<ContentReportReceipt>;
   sendMessage(input: SendMessageInput): Promise<Message>;
   retryMessage(messageId: Id): Promise<Message>;
   addReaction(input: AddReactionInput): Promise<Message>;

@@ -4,6 +4,7 @@ import type {
   Message,
   Reaction,
   RelationshipPreferences,
+  SpaceInvitation,
   SpaceMember,
   UserProfile,
 } from '@/domain/models';
@@ -39,8 +40,15 @@ export interface ThemeRow {
 }
 
 export interface InviteRow {
+  id: string;
   space_id: string;
   code: string;
+  created_at: string;
+  expires_at: string;
+  revoked_at: string | null;
+  redeemed_by: string | null;
+  use_count: number;
+  max_uses: number;
 }
 
 export interface MessageRow {
@@ -93,6 +101,7 @@ export function mapSpace(
   members: readonly MemberRow[],
   themes: readonly ThemeRow[],
   invites: readonly InviteRow[],
+  now: string = new Date().toISOString(),
 ): KinSpace {
   const preferencesByUser: Record<string, RelationshipPreferences> = {};
   for (const theme of themes.filter((item) => item.space_id === row.id)) {
@@ -102,15 +111,53 @@ export function mapSpace(
       wallpaperId: theme.wallpaper_id,
     };
   }
+  const spaceInvites = invites
+    .filter((item) => item.space_id === row.id)
+    .sort((left, right) => right.created_at.localeCompare(left.created_at));
+  const activeInvitationRow = spaceInvites.find(
+    (invite) => getInvitationStatus(invite, now) === 'active',
+  );
+  const activeInvitation = activeInvitationRow
+    ? mapInvitation(activeInvitationRow, now)
+    : undefined;
   return {
+    ...(activeInvitation ? { activeInvitation } : {}),
     archivedByUserIds: members.filter((item) => item.space_id === row.id && item.archived).map((item) => item.user_id),
     createdAt: row.created_at,
     createdBy: row.created_by,
     id: row.id,
-    inviteCode: invites.find((item) => item.space_id === row.id)?.code ?? '',
+    inviteCode: activeInvitation?.code ?? '',
     ...(row.relationship_start_date ? { relationshipStartDate: row.relationship_start_date as KinSpace['relationshipStartDate'] } : {}),
     preferencesByUser,
     stickerIds: [],
+  };
+}
+
+export function getInvitationStatus(
+  row: InviteRow,
+  now: string = new Date().toISOString(),
+): SpaceInvitation['status'] {
+  if (row.revoked_at) return 'revoked';
+  if (row.redeemed_by || row.use_count >= row.max_uses) return 'used';
+  if (row.expires_at <= now) return 'expired';
+  return 'active';
+}
+
+export function mapInvitation(
+  row: InviteRow,
+  now: string = new Date().toISOString(),
+): SpaceInvitation {
+  return {
+    code: row.code,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    id: row.id,
+    maxUses: row.max_uses,
+    ...(row.redeemed_by ? { redeemedBy: row.redeemed_by } : {}),
+    ...(row.revoked_at ? { revokedAt: row.revoked_at } : {}),
+    spaceId: row.space_id,
+    status: getInvitationStatus(row, now),
+    useCount: row.use_count,
   };
 }
 
