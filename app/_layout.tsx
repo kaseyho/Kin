@@ -11,11 +11,13 @@ import {
 } from '@expo-google-fonts/manrope';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { createAppRuntime } from '@/bootstrap/createAppRuntime';
+import { createAppRuntime, type AppRuntime } from '@/bootstrap/createAppRuntime';
 import { ConfigurationErrorScreen } from '@/components/ConfigurationErrorScreen';
 import { colors, typography } from '@/design/tokens';
 import { useReducedMotion } from '@/accessibility/useReducedMotion';
 import { KinProvider } from '@/state/KinProvider';
+import { AuthProvider } from '@/state/AuthProvider';
+import { useAuth } from '@/state/useAuth';
 import { PremiumProvider } from '@/features/premium/PremiumProvider';
 
 const runtime = createAppRuntime(AsyncStorage);
@@ -44,19 +46,37 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <PremiumProvider service={runtime.premiumService}>
-        <KinProvider repository={runtime.repository}>
-          <StatusBar style="dark" />
-          <Stack
-            screenOptions={{
-              animation: reducedMotion ? 'none' : 'fade',
-              contentStyle: { backgroundColor: colors.parchment },
-              headerShown: false,
-            }}
-          />
-        </KinProvider>
-      </PremiumProvider>
+      <AuthProvider service={runtime.authService}>
+        <AuthenticatedApp reducedMotion={reducedMotion} runtime={runtime} />
+      </AuthProvider>
     </GestureHandlerRootView>
+  );
+}
+
+function AuthenticatedApp({
+  reducedMotion,
+  runtime: readyRuntime,
+}: {
+  reducedMotion: boolean;
+  runtime: Extract<AppRuntime, { status: 'ready' }>;
+}) {
+  const auth = useAuth();
+  const kinActive = auth.state.status === 'demo' || auth.state.status === 'signed-in';
+  const kinSessionKey = auth.state.status === 'signed-in' ? auth.state.user.id : auth.state.status;
+
+  return (
+    <PremiumProvider service={readyRuntime.premiumService}>
+      <KinProvider key={kinSessionKey} active={kinActive} repository={readyRuntime.repository}>
+        <StatusBar style="dark" />
+        <Stack
+          screenOptions={{
+            animation: reducedMotion ? 'none' : 'fade',
+            contentStyle: { backgroundColor: colors.parchment },
+            headerShown: false,
+          }}
+        />
+      </KinProvider>
+    </PremiumProvider>
   );
 }
 

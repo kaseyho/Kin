@@ -14,7 +14,7 @@ import type {
 import { RepositoryError } from '@/data/errors';
 import type { Id, KinSnapshot } from '@/domain/models';
 
-export type KinLoadStatus = 'loading' | 'ready' | 'corrupt' | 'error';
+export type KinLoadStatus = 'idle' | 'loading' | 'ready' | 'corrupt' | 'error';
 
 export interface KinContextValue {
   mode: KinRepository['mode'];
@@ -49,18 +49,21 @@ export interface KinContextValue {
 export const KinContext = createContext<KinContextValue | null>(null);
 
 interface KinProviderProps extends PropsWithChildren {
+  active?: boolean;
   repository: KinRepository;
 }
 
-export function KinProvider({ children, repository }: KinProviderProps) {
-  const [status, setStatus] = useState<KinLoadStatus>('loading');
+export function KinProvider({ active = true, children, repository }: KinProviderProps) {
+  const [status, setStatus] = useState<KinLoadStatus>(active ? 'loading' : 'idle');
   const [snapshot, setSnapshot] = useState<KinSnapshot | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    let active = true;
+    if (!active) return;
+
+    let mounted = true;
     const unsubscribe = repository.subscribe((next) => {
-      if (!active) return;
+      if (!mounted) return;
       setSnapshot(next);
       setStatus('ready');
       setError(null);
@@ -69,12 +72,12 @@ export function KinProvider({ children, repository }: KinProviderProps) {
     void repository
       .load()
       .then((next) => {
-        if (!active) return;
+        if (!mounted) return;
         setSnapshot(next);
         setStatus('ready');
       })
       .catch((reason: unknown) => {
-        if (!active) return;
+        if (!mounted) return;
         const nextError = reason instanceof Error ? reason : new Error('Kin could not load.');
         setError(nextError);
         setStatus(
@@ -85,10 +88,10 @@ export function KinProvider({ children, repository }: KinProviderProps) {
       });
 
     return () => {
-      active = false;
+      mounted = false;
       unsubscribe();
     };
-  }, [repository]);
+  }, [active, repository]);
 
   const resetDemo = useCallback(async () => {
     await repository.resetDemo();
@@ -97,9 +100,9 @@ export function KinProvider({ children, repository }: KinProviderProps) {
   const value = useMemo<KinContextValue>(
     () => ({
       mode: repository.mode,
-      status,
-      snapshot,
-      error,
+      status: active ? status : 'idle',
+      snapshot: active ? snapshot : null,
+      error: active ? error : null,
       resetDemo,
       saveProfile: (input) => repository.saveProfile(input),
       createSpace: (input) => repository.createSpace(input),
@@ -116,7 +119,7 @@ export function KinProvider({ children, repository }: KinProviderProps) {
       deleteLocalSpace: (spaceId, userId, confirmation) =>
         repository.deleteLocalSpace(spaceId, userId, confirmation),
     }),
-    [error, repository, resetDemo, snapshot, status],
+    [active, error, repository, resetDemo, snapshot, status],
   );
 
   return <KinContext.Provider value={value}>{children}</KinContext.Provider>;

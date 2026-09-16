@@ -32,4 +32,29 @@ describe('KinProvider', () => {
     });
     expect(await screen.findByText('ready:maya')).toBeTruthy();
   });
+
+  it('does not load private data while inactive and clears it when deactivated', async () => {
+    const repository = createDemoKinRepository(storage);
+    const view = await render(
+      <KinProvider active={false} repository={repository}>
+        <Probe />
+      </KinProvider>,
+    );
+
+    expect(screen.getByText('idle:none')).toBeTruthy();
+
+    await view.rerender(
+      <KinProvider active repository={repository}>
+        <Probe />
+      </KinProvider>,
+    );
+    expect(await screen.findByText('ready:none')).toBeTruthy();
+
+    await view.rerender(
+      <KinProvider active={false} repository={repository}>
+        <Probe />
+      </KinProvider>,
+    );
+    expect(screen.getByText('idle:none')).toBeTruthy();
+  });
 });
