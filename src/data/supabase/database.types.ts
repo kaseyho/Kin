@@ -86,7 +86,7 @@ export interface Database {
           report_category: string;
           report_explanation: string;
         };
-        Returns: string;
+        Returns: { id: string; created_at: string };
       };
     };
     Enums: Record<string, never>;

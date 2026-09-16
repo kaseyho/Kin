@@ -18,7 +18,7 @@ describe('CreateJoinSpaceScreen', () => {
     await user.type(screen.getByLabelText('Relationship start date, optional'), '2025-12-05');
     await user.press(screen.getByRole('button', { name: 'Create our Kin Space' }));
 
-    expect(onSpaceReady).toHaveBeenCalledWith('space-3');
+    expect(onSpaceReady).toHaveBeenCalledWith('space-2');
   });
 
   it('keeps an invalid invitation available for correction', async () => {

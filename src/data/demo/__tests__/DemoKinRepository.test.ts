@@ -2,17 +2,20 @@ import type { StorageAdapter } from '../../contracts';
 import { RepositoryError } from '../../errors';
 import { createDemoKinRepository } from '../DemoKinRepository';
 
-function createMemoryStorage(initial: string | null = null): StorageAdapter & { value: () => string | null } {
-  let stored = initial;
+function createMemoryStorage(initial: string | null = null): StorageAdapter & {
+  value: (key?: string) => string | null;
+} {
+  const stored = new Map<string, string>();
+  if (initial !== null) stored.set('kin.snapshot.v1', initial);
   return {
-    getItem: async () => stored,
-    setItem: async (_key, value) => {
-      stored = value;
+    getItem: async (key) => stored.get(key) ?? null,
+    setItem: async (key, value) => {
+      stored.set(key, value);
     },
-    removeItem: async () => {
-      stored = null;
+    removeItem: async (key) => {
+      stored.delete(key);
     },
-    value: () => stored,
+    value: (key = 'kin.snapshot.v1') => stored.get(key) ?? null,
   };
 }
 
@@ -72,6 +75,10 @@ describe('DemoKinRepository', () => {
 
     expect(profile.displayName).toBe('Maya');
     expect(space.inviteCode).toBe('KIN123');
+    expect(space.activeInvitation?.status).toBe('active');
+    expect((await repository.load()).members).toEqual([
+      expect.objectContaining({ role: 'owner', spaceId: space.id, userId: profile.id }),
+    ]);
 
     const sent = await repository.sendMessage({
       spaceId: space.id,
@@ -104,16 +111,110 @@ describe('DemoKinRepository', () => {
   });
 
   it('joins a known invitation and keeps an invalid code recoverable', async () => {
-    const repository = createRepository();
-    await repository.saveProfile({ displayName: 'Maya', avatarUri: 'maya.png' });
-    const created = await repository.createSpace({ otherDisplayName: 'Jamie' });
+    const storage = createMemoryStorage(JSON.stringify({
+      currentUserId: 'maya',
+      members: [{
+        joinedAt: '2026-09-13T08:00:00.000Z',
+        role: 'owner',
+        spaceId: 'space-joinable',
+        userId: 'jamie',
+      }],
+      memories: [],
+      messages: [],
+      profiles: [
+        { avatarUri: 'maya.png', createdAt: '2026-09-13T08:00:00.000Z', displayName: 'Maya', id: 'maya' },
+        { avatarUri: 'jamie.png', createdAt: '2026-09-13T08:00:00.000Z', displayName: 'Jamie', id: 'jamie' },
+      ],
+      schemaVersion: 1,
+      spaces: [{
+        activeInvitation: {
+          code: 'KIN123',
+          createdAt: '2026-09-13T08:00:00.000Z',
+          expiresAt: '2026-09-20T08:00:00.000Z',
+          id: 'invite-joinable',
+          maxUses: 1,
+          spaceId: 'space-joinable',
+          status: 'active',
+          useCount: 0,
+        },
+        archivedByUserIds: [],
+        createdAt: '2026-09-13T08:00:00.000Z',
+        createdBy: 'jamie',
+        id: 'space-joinable',
+        inviteCode: 'KIN123',
+        preferencesByUser: {
+          jamie: { nickname: 'Maya', themeId: 'kin', wallpaperId: 'paper' },
+        },
+        stickerIds: [],
+      }],
+    }));
+    const repository = createRepository(storage);
 
-    expect((await repository.joinSpace({ inviteCode: created.inviteCode.toLowerCase() })).id).toBe(
-      created.id,
-    );
+    const joined = await repository.joinSpace({ inviteCode: 'kin123' });
+    expect(joined.id).toBe('space-joinable');
+    expect(joined.activeInvitation).toBeUndefined();
+    expect(joined.inviteCode).toBe('');
+    expect((await repository.load()).members).toHaveLength(2);
     await expect(repository.joinSpace({ inviteCode: 'NOPE00' })).rejects.toMatchObject({
       code: 'invite_invalid',
     });
+  });
+
+  it('rotates and revokes a waiting invitation with explicit statuses', async () => {
+    const codes = ['KIN123', 'KIN456'];
+    let sequence = 0;
+    const repository = createDemoKinRepository(createMemoryStorage(), {
+      id: (kind) => `${kind}-${++sequence}`,
+      inviteCode: () => codes.shift() ?? 'KIN789',
+      now: () => '2026-09-13T08:00:00.000Z',
+    });
+    await repository.saveProfile({ displayName: 'Maya', avatarUri: 'maya.png' });
+    const space = await repository.createSpace({ otherDisplayName: 'Jamie' });
+
+    const rotated = await repository.rotateSpaceInvite!({ spaceId: space.id });
+    expect(rotated).toMatchObject({ code: 'KIN456', status: 'active' });
+
+    const revoked = await repository.revokeSpaceInvite!({ spaceId: space.id });
+    expect(revoked).toMatchObject({ code: 'KIN456', status: 'revoked' });
+    expect((await repository.load()).spaces[0]).toMatchObject({ inviteCode: '' });
+    expect((await repository.load()).spaces[0].activeInvitation).toBeUndefined();
+  });
+
+  it('keeps report details in developer-only storage and removes blocked relationship access', async () => {
+    const storage = createMemoryStorage();
+    const repository = createRepository(storage);
+    await repository.resetDemo();
+
+    await expect(repository.submitContentReport!({
+      category: 'harassment',
+      messageId: 'missing-message',
+      spaceId: 'space-maya-jamie',
+    })).rejects.toMatchObject({ code: 'report_invalid' });
+
+    const receipt = await repository.submitContentReport!({
+      category: 'harassment',
+      explanation: 'Please review this message.',
+      messageId: 'message-1',
+      spaceId: 'space-maya-jamie',
+    });
+    expect(receipt).toMatchObject({ status: 'submitted' });
+    expect(storage.value()).not.toContain('Please review this message.');
+    expect(storage.value('kin.safety.v1')).toContain('Please review this message.');
+
+    await repository.blockSpaceMember!({ spaceId: 'space-maya-jamie' });
+    expect((await repository.load()).spaces).toHaveLength(0);
+    expect(storage.value('kin.safety.v1')).toContain('jamie');
+  });
+
+  it('removes a departed Space from the current demo user view', async () => {
+    const repository = createRepository();
+    await repository.resetDemo();
+
+    await repository.leaveSpace!({ spaceId: 'space-maya-jamie' });
+
+    expect((await repository.load()).spaces).toHaveLength(0);
+    expect((await repository.load()).messages).toHaveLength(0);
+    expect((await repository.load()).memories).toHaveLength(0);
   });
 
   it('keeps a failed send in place and retries the same message id', async () => {

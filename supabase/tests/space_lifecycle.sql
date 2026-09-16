@@ -225,7 +225,7 @@ select 'report_id', public.submit_content_report(
   '31000000-0000-0000-0000-000000000001',
   'harassment',
   'Please review this message.'
-)::text;
+)->>'id';
 
 do $$
 begin

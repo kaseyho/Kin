@@ -34,7 +34,7 @@ export function createDemoSnapshot(): KinSnapshot {
       {
         id: 'space-maya-jamie',
         createdBy: 'maya',
-        inviteCode: 'KINLOVE',
+        inviteCode: '',
         createdAt: '2025-04-18T09:04:00.000Z',
         relationshipStartDate: '2025-12-05',
         preferencesByUser: {

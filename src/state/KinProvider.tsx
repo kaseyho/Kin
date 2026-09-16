@@ -2,12 +2,17 @@ import { createContext, PropsWithChildren, useCallback, useEffect, useMemo, useS
 
 import type {
   AddReactionInput,
+  BlockSpaceMemberInput,
   CreateSpaceInput,
   JoinSpaceInput,
   KinRepository,
+  LeaveSpaceInput,
+  RevokeSpaceInviteInput,
+  RotateSpaceInviteInput,
   SaveMemoryInput,
   SaveProfileInput,
   SendMessageInput,
+  SubmitContentReportInput,
   UpdateMemoryInput,
   UpdateSpacePreferencesInput,
 } from '@/data/contracts';
@@ -25,6 +30,19 @@ export interface KinContextValue {
   saveProfile: (input: SaveProfileInput) => ReturnType<KinRepository['saveProfile']>;
   createSpace: (input: CreateSpaceInput) => ReturnType<KinRepository['createSpace']>;
   joinSpace: (input: JoinSpaceInput) => ReturnType<KinRepository['joinSpace']>;
+  rotateSpaceInvite: (
+    input: RotateSpaceInviteInput,
+  ) => ReturnType<KinRepository['rotateSpaceInvite']>;
+  revokeSpaceInvite: (
+    input: RevokeSpaceInviteInput,
+  ) => ReturnType<KinRepository['revokeSpaceInvite']>;
+  leaveSpace: (input: LeaveSpaceInput) => ReturnType<KinRepository['leaveSpace']>;
+  blockSpaceMember: (
+    input: BlockSpaceMemberInput,
+  ) => ReturnType<KinRepository['blockSpaceMember']>;
+  submitContentReport: (
+    input: SubmitContentReportInput,
+  ) => ReturnType<KinRepository['submitContentReport']>;
   sendMessage: (input: SendMessageInput) => ReturnType<KinRepository['sendMessage']>;
   retryMessage: (messageId: Id) => ReturnType<KinRepository['retryMessage']>;
   addReaction: (input: AddReactionInput) => ReturnType<KinRepository['addReaction']>;
@@ -107,6 +125,11 @@ export function KinProvider({ active = true, children, repository }: KinProvider
       saveProfile: (input) => repository.saveProfile(input),
       createSpace: (input) => repository.createSpace(input),
       joinSpace: (input) => repository.joinSpace(input),
+      rotateSpaceInvite: (input) => repository.rotateSpaceInvite(input),
+      revokeSpaceInvite: (input) => repository.revokeSpaceInvite(input),
+      leaveSpace: (input) => repository.leaveSpace(input),
+      blockSpaceMember: (input) => repository.blockSpaceMember(input),
+      submitContentReport: (input) => repository.submitContentReport(input),
       sendMessage: (input) => repository.sendMessage(input),
       retryMessage: (messageId) => repository.retryMessage(messageId),
       addReaction: (input) => repository.addReaction(input),

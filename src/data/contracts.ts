@@ -106,11 +106,11 @@ export interface KinRepository {
   saveProfile(input: SaveProfileInput): Promise<UserProfile>;
   createSpace(input: CreateSpaceInput): Promise<KinSpace>;
   joinSpace(input: JoinSpaceInput): Promise<KinSpace>;
-  rotateSpaceInvite?(input: RotateSpaceInviteInput): Promise<SpaceInvitation>;
-  revokeSpaceInvite?(input: RevokeSpaceInviteInput): Promise<SpaceInvitation>;
-  leaveSpace?(input: LeaveSpaceInput): Promise<void>;
-  blockSpaceMember?(input: BlockSpaceMemberInput): Promise<void>;
-  submitContentReport?(input: SubmitContentReportInput): Promise<ContentReportReceipt>;
+  rotateSpaceInvite(input: RotateSpaceInviteInput): Promise<SpaceInvitation>;
+  revokeSpaceInvite(input: RevokeSpaceInviteInput): Promise<SpaceInvitation>;
+  leaveSpace(input: LeaveSpaceInput): Promise<void>;
+  blockSpaceMember(input: BlockSpaceMemberInput): Promise<void>;
+  submitContentReport(input: SubmitContentReportInput): Promise<ContentReportReceipt>;
   sendMessage(input: SendMessageInput): Promise<Message>;
   retryMessage(messageId: Id): Promise<Message>;
   addReaction(input: AddReactionInput): Promise<Message>;

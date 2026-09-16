@@ -1,15 +1,30 @@
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 
 import { createMemoryItem } from '@/domain/commands';
-import type { Id, KinSnapshot, KinSpace, MemoryItem, Message, UserProfile } from '@/domain/models';
+import {
+  isContentReportCategory,
+  type ContentReportReceipt,
+  type Id,
+  type KinSnapshot,
+  type KinSpace,
+  type MemoryItem,
+  type Message,
+  type SpaceInvitation,
+  type UserProfile,
+} from '@/domain/models';
 import type {
   AddReactionInput,
+  BlockSpaceMemberInput,
   CreateSpaceInput,
   JoinSpaceInput,
   KinRepository,
+  LeaveSpaceInput,
+  RevokeSpaceInviteInput,
+  RotateSpaceInviteInput,
   SaveMemoryInput,
   SaveProfileInput,
   SendMessageInput,
+  SubmitContentReportInput,
   UpdateMemoryInput,
   UpdateSpacePreferencesInput,
 } from '../contracts';
@@ -23,6 +38,7 @@ import {
   mapMessage,
   mapProfile,
   mapSpace,
+  mapInvitation,
   type InviteRow,
   type MemberRow,
   type MemoryMessageRow,
@@ -124,10 +140,10 @@ class SupabaseKinRepository implements KinRepository {
           media_uris: await Promise.all(row.media_uris.map((uri) => resolveKinMedia(this.client, uri))),
         }))),
       ]);
-    } catch (error) {
+    } catch {
       throw new RepositoryError(
         'load_failed',
-        `Kin could not open private media. ${errorMessage(error)}`,
+        'Kin could not open private media. Try reconnecting.',
         'reconnect',
       );
     }
@@ -177,46 +193,133 @@ class SupabaseKinRepository implements KinRepository {
   }
 
   async createSpace(input: CreateSpaceInput): Promise<KinSpace> {
-    const userId = await this.ensureUserId();
+    await this.ensureUserId();
     const nickname = input.otherDisplayName.trim();
     if (!nickname) throw new RepositoryError('profile_required', 'Who is this Kin Space for?', 'onboard');
-    const id = randomUuid();
-    const createdAt = new Date().toISOString();
-    const inviteCode = makeInviteCode();
-    const spaceResult = await this.client.from('kin_spaces').insert({
-      created_at: createdAt,
-      created_by: userId,
-      id,
+    const result = await this.client.rpc('create_kin_space', {
+      other_display_name: nickname,
       relationship_start_date: input.relationshipStartDate ?? null,
     });
-    assertResult(spaceResult.error, 'save_failed', 'Kin could not create that Space.', 'retry');
-    const membershipResult = await this.client.from('kin_space_members').insert({
-      archived: false,
-      joined_at: createdAt,
-      role: 'owner',
-      space_id: id,
-      user_id: userId,
-    });
-    assertResult(membershipResult.error, 'save_failed', 'Kin could not finish creating that Space.', 'retry');
-    const [themeResult, inviteResult] = await Promise.all([
-      this.client.from('space_themes').insert({ nickname, space_id: id, theme_id: 'kin', user_id: userId, wallpaper_id: 'paper' }),
-      this.client.from('space_invites').insert({ code: inviteCode, created_by: userId, space_id: id }),
-    ]);
-    assertResult(themeResult.error ?? inviteResult.error, 'save_failed', 'Kin could not prepare that invitation.', 'retry');
+    if (result.error || !result.data) {
+      throw mapLifecycleError(result.error, 'save_failed', 'Kin could not create that Space.', 'retry');
+    }
     const snapshot = await this.refreshAndEmit();
-    return requireEntity(snapshot.spaces.find((space) => space.id === id), 'Kin could not reopen the new Space.');
+    return requireEntity(
+      snapshot.spaces.find((space) => space.id === result.data),
+      'Kin could not reopen the new Space.',
+    );
   }
 
   async joinSpace(input: JoinSpaceInput): Promise<KinSpace> {
     const code = input.inviteCode.trim().toUpperCase();
     const result = await this.client.rpc('redeem_space_invite', { invite_code: code });
     if (result.error || !result.data) {
-      throw new RepositoryError('invite_invalid', 'That invitation is invalid, expired, or already used.', 'reenter');
+      throw mapLifecycleError(
+        result.error,
+        'invite_invalid',
+        'That invitation could not be used.',
+        'reenter',
+      );
     }
-    const userId = await this.ensureUserId();
-    await this.client.from('space_themes').upsert({ nickname: 'Your person', space_id: result.data, theme_id: 'kin', user_id: userId, wallpaper_id: 'paper' });
     const snapshot = await this.refreshAndEmit();
     return requireEntity(snapshot.spaces.find((space) => space.id === result.data), 'Kin could not open the joined Space.');
+  }
+
+  async rotateSpaceInvite(input: RotateSpaceInviteInput): Promise<SpaceInvitation> {
+    const result = await this.client.rpc('rotate_space_invite', {
+      target_space_id: input.spaceId,
+    });
+    if (result.error || !result.data) {
+      throw mapLifecycleError(
+        result.error,
+        'save_failed',
+        'Kin could not create a new invitation.',
+        'retry',
+      );
+    }
+    const invitation = mapInvitation(firstRow(result.data));
+    await this.refreshAndEmit();
+    return invitation;
+  }
+
+  async revokeSpaceInvite(input: RevokeSpaceInviteInput): Promise<SpaceInvitation> {
+    const result = await this.client.rpc('revoke_space_invite', {
+      target_space_id: input.spaceId,
+    });
+    if (result.error || !result.data) {
+      throw mapLifecycleError(
+        result.error,
+        'save_failed',
+        'Kin could not revoke that invitation.',
+        'retry',
+      );
+    }
+    const invitation = mapInvitation(firstRow(result.data));
+    await this.refreshAndEmit();
+    return invitation;
+  }
+
+  async leaveSpace(input: LeaveSpaceInput): Promise<void> {
+    const result = await this.client.rpc('leave_kin_space', {
+      target_space_id: input.spaceId,
+    });
+    if (result.error) {
+      throw mapLifecycleError(
+        result.error,
+        'save_failed',
+        'Kin could not leave that Space.',
+        'retry',
+      );
+    }
+    await this.refreshAndEmit();
+  }
+
+  async blockSpaceMember(input: BlockSpaceMemberInput): Promise<void> {
+    const result = await this.client.rpc('block_kin_space_member', {
+      target_space_id: input.spaceId,
+    });
+    if (result.error) {
+      throw mapLifecycleError(
+        result.error,
+        'save_failed',
+        'Kin could not block that person.',
+        'retry',
+      );
+    }
+    await this.refreshAndEmit();
+  }
+
+  async submitContentReport(input: SubmitContentReportInput): Promise<ContentReportReceipt> {
+    if (!isContentReportCategory(input.category)) {
+      throw new RepositoryError('report_invalid', 'Choose a valid reason for this report.', 'reenter');
+    }
+    const explanation = input.explanation?.trim() ?? '';
+    if (explanation.length > 2000) {
+      throw new RepositoryError(
+        'report_invalid',
+        'Keep report details to 2,000 characters or fewer.',
+        'reenter',
+      );
+    }
+    const result = await this.client.rpc('submit_content_report', {
+      report_category: input.category,
+      report_explanation: explanation,
+      target_message_id: input.messageId ?? null,
+      target_space_id: input.spaceId,
+    });
+    if (result.error || !result.data) {
+      throw mapLifecycleError(
+        result.error,
+        'save_failed',
+        'Kin could not submit that report.',
+        'retry',
+      );
+    }
+    return {
+      createdAt: result.data.created_at,
+      id: result.data.id,
+      status: 'submitted',
+    };
   }
 
   async sendMessage(input: SendMessageInput): Promise<Message> {
@@ -339,8 +442,8 @@ class SupabaseKinRepository implements KinRepository {
           spaceId: memory.spaceId,
           userId: createdBy,
         })));
-    } catch (error) {
-      throw new RepositoryError('save_failed', `Kin could not upload that memory. ${errorMessage(error)}`, 'retry');
+    } catch {
+      throw new RepositoryError('save_failed', 'Kin could not upload that memory.', 'retry');
     }
     const result = await this.client.from('memory_items').insert({
       ...toMemoryRow(memory),
@@ -427,8 +530,12 @@ class SupabaseKinRepository implements KinRepository {
     this.realtimeSpaceKey = spaceKey;
     if (spaceIds.length === 0) return;
     const spaceFilter = `space_id=in.(${spaceKey})`;
+    const idFilter = `id=in.(${spaceKey})`;
     this.channel = this.client
       .channel(`kin-member-updates-${spaceIds.length}`)
+      .on('postgres_changes', { event: '*', filter: spaceFilter, schema: 'public', table: 'kin_space_members' }, () => { void this.refreshFromRealtime(); })
+      .on('postgres_changes', { event: '*', filter: idFilter, schema: 'public', table: 'kin_spaces' }, () => { void this.refreshFromRealtime(); })
+      .on('postgres_changes', { event: '*', filter: spaceFilter, schema: 'public', table: 'space_invites' }, () => { void this.refreshFromRealtime(); })
       .on('postgres_changes', { event: '*', filter: spaceFilter, schema: 'public', table: 'messages' }, () => { void this.refreshFromRealtime(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, () => { void this.refreshFromRealtime(); })
       .on('postgres_changes', { event: '*', filter: spaceFilter, schema: 'public', table: 'memory_items' }, () => { void this.refreshFromRealtime(); })
@@ -473,7 +580,7 @@ function assertResult(
   message: string,
   action?: 'retry' | 'reset' | 'reenter' | 'onboard' | 'reconnect',
 ): asserts error is null {
-  if (error) throw new RepositoryError(code, `${message} ${error.message}`, action);
+  if (error) throw new RepositoryError(code, message, action);
 }
 
 function requireEntity<T>(value: T | null | undefined, message: string): T {
@@ -481,9 +588,55 @@ function requireEntity<T>(value: T | null | undefined, message: string): T {
   return value;
 }
 
-function makeInviteCode(): string {
-  return Math.random().toString(36).slice(2, 8).toUpperCase().padEnd(6, 'K');
+function firstRow<T>(value: T | T[]): T {
+  return Array.isArray(value) ? requireEntity(value[0], 'Kin received an empty result.') : value;
 }
+
+function mapLifecycleError(
+  error: unknown,
+  fallbackCode: RepositoryErrorCode,
+  fallbackMessage: string,
+  fallbackRecovery?: RepositoryError['recovery'],
+): RepositoryError {
+  const text = lifecycleErrorText(error);
+  const match = LIFECYCLE_ERRORS.find(([machineCode]) => text.includes(machineCode));
+  if (!match) return new RepositoryError(fallbackCode, fallbackMessage, fallbackRecovery);
+  const [, code, message, recovery] = match;
+  return new RepositoryError(code, message, recovery);
+}
+
+function lifecycleErrorText(error: unknown): string {
+  if (!error || typeof error !== 'object') return String(error ?? '');
+  const candidate = error as Record<string, unknown>;
+  return ['code', 'message', 'details', 'hint']
+    .map((key) => candidate[key])
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ');
+}
+
+const LIFECYCLE_ERRORS: readonly [
+  machineCode: string,
+  code: RepositoryErrorCode,
+  message: string,
+  recovery?: RepositoryError['recovery'],
+][] = [
+  ['KIN_INVITE_EXPIRED', 'invite_expired', 'That invitation has expired.', 'reenter'],
+  ['KIN_INVITE_REVOKED', 'invite_revoked', 'That invitation was revoked.', 'reenter'],
+  ['KIN_INVITE_USED', 'invite_used', 'That invitation has already been used.', 'reenter'],
+  ['KIN_INVITE_SELF', 'invite_self', 'You cannot join your own invitation.', 'reenter'],
+  ['KIN_INVITE_BLOCKED', 'blocked', 'This connection is unavailable.', 'reenter'],
+  ['KIN_SPACE_FULL', 'space_full', 'That Kin Space already has two people.', 'reenter'],
+  ['KIN_ALREADY_MEMBER', 'already_member', 'You already belong to that Kin Space.', 'reenter'],
+  ['KIN_INVITE_INVALID', 'invite_invalid', 'That invitation could not be found.', 'reenter'],
+  ['KIN_INVITE_UNAVAILABLE', 'invite_invalid', 'There is no active invitation to change.', 'retry'],
+  ['KIN_SPACE_UNAVAILABLE', 'not_found', 'That Kin Space is no longer available.', 'reconnect'],
+  ['KIN_BLOCK_TARGET_UNAVAILABLE', 'not_found', 'There is no connected person to block.', 'reconnect'],
+  ['KIN_REPORT_CATEGORY_INVALID', 'report_invalid', 'Choose a valid reason for this report.', 'reenter'],
+  ['KIN_REPORT_EXPLANATION_TOO_LONG', 'report_invalid', 'Keep report details to 2,000 characters or fewer.', 'reenter'],
+  ['KIN_REPORT_TARGET_INVALID', 'report_invalid', 'That report target is unavailable.', 'reenter'],
+  ['KIN_PROFILE_REQUIRED', 'profile_required', 'Finish your profile before continuing.', 'onboard'],
+  ['KIN_AUTH_REQUIRED', 'auth_required', 'Sign in to continue.', 'reconnect'],
+];
 
 function randomUuid(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
@@ -496,8 +649,4 @@ function randomUuid(): string {
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Please try again.';
 }
