@@ -118,7 +118,7 @@ refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
-enable_anonymous_sign_ins = true
+enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
@@ -284,6 +284,14 @@ policy = "oneshot"
 inspector_port = 8083
 # The Deno major version to use.
 deno_version = 1
+
+# These functions validate bearer tokens with Auth inside their handlers so the
+# same path works with current Supabase signing keys and returns Kin-owned errors.
+[functions.export-account]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"

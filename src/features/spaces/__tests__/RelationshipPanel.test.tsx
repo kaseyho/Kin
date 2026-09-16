@@ -1,6 +1,7 @@
 import { screen, userEvent } from '@testing-library/react-native';
 
 import { AuthContext, type AuthContextValue } from '@/state/AuthProvider';
+import { createDemoAccountService } from '@/services/account/demo';
 import { createTestRepository, renderKin } from '../../../../tests/helpers/renderKin';
 import { ChatListScreen } from '../../chats/ChatListScreen';
 import { ProfileScreen } from '../../profile/ProfileScreen';
@@ -65,6 +66,7 @@ describe('RelationshipPanel', () => {
     await chats.unmount();
 
     const auth: AuthContextValue = {
+      accountService: createDemoAccountService(),
       requestOtp: async () => undefined,
       signOut: async () => undefined,
       state: { status: 'demo' },

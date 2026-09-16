@@ -2,6 +2,7 @@ import { act, render, screen, userEvent } from '@testing-library/react-native';
 
 import { AuthContext, type AuthContextValue } from '@/state/AuthProvider';
 import { AuthError } from '@/services/auth/contracts';
+import { createDemoAccountService } from '@/services/account/demo';
 import { AuthScreen } from '../AuthScreen';
 
 async function renderAuthScreen({
@@ -14,6 +15,7 @@ async function renderAuthScreen({
   verifyOtp?: AuthContextValue['verifyOtp'];
 } = {}) {
   const value: AuthContextValue = {
+    accountService: createDemoAccountService(),
     requestOtp,
     signOut: async () => undefined,
     state: { status: 'signed-out' },

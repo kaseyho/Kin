@@ -46,7 +46,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider service={runtime.authService}>
+      <AuthProvider accountService={runtime.accountService} service={runtime.authService}>
         <AuthenticatedApp reducedMotion={reducedMotion} runtime={runtime} />
       </AuthProvider>
     </GestureHandlerRootView>

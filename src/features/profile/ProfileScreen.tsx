@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, radii, spacing, typography } from '@/design/tokens';
 import { usePremiumGate } from '@/features/premium/usePremiumGate';
+import { useAuth } from '@/state/useAuth';
 import { useKin } from '@/state/useKin';
 import { AccountActions } from './AccountActions';
 import { EditProfileSheet } from './EditProfileSheet';
@@ -14,6 +15,7 @@ interface ProfileScreenProps {
 }
 
 export function ProfileScreen({ onOpenKinPlus, onSignedOut }: ProfileScreenProps) {
+  const auth = useAuth();
   const kin = useKin();
   const premium = usePremiumGate();
   const [editing, setEditing] = useState(false);
@@ -21,6 +23,7 @@ export function ProfileScreen({ onOpenKinPlus, onSignedOut }: ProfileScreenProps
   const userId = snapshot?.currentUserId;
   const profile = snapshot?.profiles.find((item) => item.id === userId);
   const archived = snapshot?.spaces.filter((space) => userId && space.archivedByUserIds.includes(userId)) ?? [];
+  const accountEmail = auth.state.status === 'signed-in' ? auth.state.user.email : undefined;
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -79,9 +82,18 @@ export function ProfileScreen({ onOpenKinPlus, onSignedOut }: ProfileScreenProps
         </View>
 
         <AccountActions
+          accountEmail={accountEmail}
           mode={kin.mode}
+          onDelete={accountEmail ? () => auth.accountService.deleteAccount() : undefined}
+          onExport={accountEmail ? () => auth.accountService.exportData() : undefined}
+          onRequestFreshOtp={accountEmail
+            ? (email) => auth.accountService.requestFreshOtp(email)
+            : undefined}
           onResetDemo={kin.resetDemo}
           onSignedOut={onSignedOut}
+          onVerifyFreshOtp={accountEmail
+            ? (email, token) => auth.accountService.verifyFreshOtp(email, token)
+            : undefined}
         />
       </ScrollView>
       {editing && profile ? (

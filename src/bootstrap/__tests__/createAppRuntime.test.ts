@@ -4,6 +4,7 @@ import type { StorageAdapter, KinRepository } from '@/data/contracts';
 import type { Database } from '@/data/supabase/database.types';
 import type { PremiumService } from '@/services/billing/contracts';
 import type { AuthService } from '@/services/auth/contracts';
+import type { AccountService } from '@/services/account/contracts';
 
 import { createAppRuntime } from '../createAppRuntime';
 
@@ -20,6 +21,7 @@ const storage: StorageAdapter = {
 const repository = {} as KinRepository;
 const premiumService = {} as PremiumService;
 const authService = {} as AuthService;
+const accountService = {} as AccountService;
 
 describe('createAppRuntime', () => {
   it('turns invalid configuration into a renderable result', () => {
@@ -36,6 +38,7 @@ describe('createAppRuntime', () => {
       storage,
       { EXPO_PUBLIC_KIN_ENVIRONMENT: 'demo' },
       {
+        createAccountService: () => accountService,
         createAuthService: () => authService,
         createPremiumService: () => premiumService,
         createRepository: () => repository,
@@ -43,6 +46,7 @@ describe('createAppRuntime', () => {
     );
 
     expect(runtime).toEqual({
+      accountService,
       environment: { deployment: 'demo', mode: 'demo' },
       authService,
       premiumService,
@@ -56,6 +60,7 @@ describe('createAppRuntime', () => {
       storage,
       { EXPO_PUBLIC_KIN_ENVIRONMENT: 'demo' },
       {
+        createAccountService: () => accountService,
         createAuthService: () => authService,
         createPremiumService: () => premiumService,
         createRepository: () => { throw new Error('construction failed'); },
@@ -74,6 +79,10 @@ describe('createAppRuntime', () => {
         EXPO_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321',
       },
       {
+        createAccountService: (_storage, _values, _environment, suppliedClient) => {
+          clientsSeen.push(suppliedClient);
+          return accountService;
+        },
         createAuthService: (_storage, _values, _environment, suppliedClient) => {
           clientsSeen.push(suppliedClient);
           return authService;
@@ -88,6 +97,7 @@ describe('createAppRuntime', () => {
     );
 
     expect(runtime).toEqual({
+      accountService,
       environment: {
         deployment: 'development',
         mode: 'connected',
@@ -99,6 +109,6 @@ describe('createAppRuntime', () => {
       repository,
       status: 'ready',
     });
-    expect(clientsSeen).toEqual([client, client]);
+    expect(clientsSeen).toEqual([client, client, client]);
   });
 });

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text } from 'react-native';
 
 import type { AuthService, AuthState, AuthUser } from '@/services/auth/contracts';
+import type { AccountService } from '@/services/account/contracts';
 import { AuthProvider } from '../AuthProvider';
 import { useAuth } from '../useAuth';
 
@@ -53,6 +54,17 @@ class FakeAuthService implements AuthService {
   }
 }
 
+const accountService = {
+  deleteAccount: async () => ({ deleted: true as const }),
+  exportData: async () => ({
+    exportedAt: '2026-09-16T00:00:00.000Z',
+    profile: null,
+    version: 1 as const,
+  }),
+  requestFreshOtp: async () => undefined,
+  verifyFreshOtp: async () => undefined,
+} satisfies AccountService;
+
 function Probe() {
   const auth = useAuth();
   const [outcome, setOutcome] = useState('');
@@ -88,11 +100,16 @@ function Probe() {
   );
 }
 
+function AccountProbe() {
+  const auth = useAuth();
+  return <Text>{auth.accountService === accountService ? 'account-ready' : 'account-missing'}</Text>;
+}
+
 describe('AuthProvider', () => {
   it('shows loading until session restoration resolves', async () => {
     const service = new FakeAuthService();
     await render(
-      <AuthProvider service={service}>
+      <AuthProvider accountService={accountService} service={service}>
         <Probe />
       </AuthProvider>,
     );
@@ -105,7 +122,7 @@ describe('AuthProvider', () => {
   it('keeps a newer auth event when a stale load finishes later', async () => {
     const service = new FakeAuthService();
     await render(
-      <AuthProvider service={service}>
+      <AuthProvider accountService={accountService} service={service}>
         <Probe />
       </AuthProvider>,
     );
@@ -124,7 +141,7 @@ describe('AuthProvider', () => {
   it('fails closed when session restoration is unavailable', async () => {
     const service = new FakeAuthService();
     await render(
-      <AuthProvider service={service}>
+      <AuthProvider accountService={accountService} service={service}>
         <Probe />
       </AuthProvider>,
     );
@@ -137,7 +154,7 @@ describe('AuthProvider', () => {
   it('exposes auth actions and their consumer-visible results', async () => {
     const service = new FakeAuthService();
     await render(
-      <AuthProvider service={service}>
+      <AuthProvider accountService={accountService} service={service}>
         <Probe />
       </AuthProvider>,
     );
@@ -154,7 +171,7 @@ describe('AuthProvider', () => {
   it('removes its auth listener on unmount', async () => {
     const service = new FakeAuthService();
     const view = await render(
-      <AuthProvider service={service}>
+      <AuthProvider accountService={accountService} service={service}>
         <Probe />
       </AuthProvider>,
     );
@@ -163,5 +180,16 @@ describe('AuthProvider', () => {
     await view.unmount();
 
     expect(service.listenerCount).toBe(0);
+  });
+
+  it('exposes account lifecycle operations beside the session', async () => {
+    const service = new FakeAuthService();
+    await render(
+      <AuthProvider accountService={accountService} service={service}>
+        <AccountProbe />
+      </AuthProvider>,
+    );
+
+    expect(screen.getByText('account-ready')).toBeTruthy();
   });
 });

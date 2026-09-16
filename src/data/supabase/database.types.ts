@@ -34,6 +34,10 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      prepare_account_deletion: {
+        Args: { target_user_id: string };
+        Returns: undefined;
+      };
       redeem_space_invite: {
         Args: { invite_code: string };
         Returns: string;

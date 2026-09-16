@@ -8,8 +8,10 @@ import {
 } from 'react';
 
 import type { AuthService, AuthState } from '@/services/auth/contracts';
+import type { AccountService } from '@/services/account/contracts';
 
 export interface AuthContextValue {
+  accountService: AccountService;
   state: AuthState;
   requestOtp: AuthService['requestOtp'];
   verifyOtp: AuthService['verifyOtp'];
@@ -19,10 +21,11 @@ export interface AuthContextValue {
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 interface AuthProviderProps extends PropsWithChildren {
+  accountService: AccountService;
   service: AuthService;
 }
 
-export function AuthProvider({ children, service }: AuthProviderProps) {
+export function AuthProvider({ accountService, children, service }: AuthProviderProps) {
   const [state, setState] = useState<AuthState>({ status: 'loading' });
 
   useEffect(() => {
@@ -61,8 +64,8 @@ export function AuthProvider({ children, service }: AuthProviderProps) {
   const signOut = useCallback<AuthService['signOut']>(() => service.signOut(), [service]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ requestOtp, signOut, state, verifyOtp }),
-    [requestOtp, signOut, state, verifyOtp],
+    () => ({ accountService, requestOtp, signOut, state, verifyOtp }),
+    [accountService, requestOtp, signOut, state, verifyOtp],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -7,6 +7,9 @@ import { createDemoKinRepository } from '@/data/demo/DemoKinRepository';
 import { createSupabaseClient } from '@/data/supabase/client';
 import type { Database } from '@/data/supabase/database.types';
 import { createSupabaseKinRepository } from '@/data/supabase/SupabaseKinRepository';
+import type { AccountService } from '@/services/account/contracts';
+import { createDemoAccountService } from '@/services/account/demo';
+import { createSupabaseAccountService } from '@/services/account/supabase';
 import type { AuthService } from '@/services/auth/contracts';
 import { createDemoAuthService } from '@/services/auth/demo';
 import { createSupabaseAuthService } from '@/services/auth/supabase';
@@ -17,6 +20,7 @@ export type AppRuntime =
   | {
       status: 'ready';
       environment: KinEnvironment;
+      accountService: AccountService;
       authService: AuthService;
       repository: KinRepository;
       premiumService: PremiumService;
@@ -24,6 +28,12 @@ export type AppRuntime =
   | { status: 'configuration-error'; error: ConfigurationError };
 
 interface RuntimeFactories {
+  createAccountService: (
+    storage: StorageAdapter,
+    values: EnvironmentValues,
+    environment: KinEnvironment,
+    client?: SupabaseClient<Database>,
+  ) => AccountService;
   createAuthService: (
     storage: StorageAdapter,
     values: EnvironmentValues,
@@ -49,6 +59,10 @@ interface RuntimeFactories {
 }
 
 const defaultFactories: RuntimeFactories = {
+  createAccountService: (_storage, _values, environment, client) =>
+    environment.mode === 'demo'
+      ? createDemoAccountService()
+      : createSupabaseAccountService(requireConnectedClient(client)),
   createAuthService: (_storage, _values, environment, client) =>
     environment.mode === 'demo'
       ? createDemoAuthService()
@@ -87,6 +101,7 @@ export function createAppRuntime(
         })
       : undefined;
     return {
+      accountService: factories.createAccountService(storage, values, environment, client),
       authService: factories.createAuthService(storage, values, environment, client),
       environment,
       premiumService: factories.createPremiumService(storage, values, environment),

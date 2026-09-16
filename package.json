@@ -8,6 +8,7 @@
     "start": "expo start",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
+    "typecheck:functions": "npx --yes deno@2.9.6 check supabase/functions/export-account/index.ts supabase/functions/delete-account/index.ts",
     "lint": "expo lint",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
@@ -17,7 +18,7 @@
     "audit:production": "npm audit --omit=dev --json | node scripts/check-audit.mjs",
     "verify:environment": "node scripts/verify-environment.mjs",
     "verify": "npm run verify:environment && npm run typecheck && npm run lint && npm test && npm run export:web:demo",
-    "verify:ci": "npm run verify && npm run audit:production"
+    "verify:ci": "npm run verify && npm run typecheck:functions && npm run audit:production"
   },
   "repository": {
     "type": "git",
