@@ -285,12 +285,15 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 1
 
-# These functions validate bearer tokens with Auth inside their handlers so the
-# same path works with current Supabase signing keys and returns Kin-owned errors.
+# Consumer functions validate bearer tokens with Auth inside their handlers. The
+# cleanup worker validates a dedicated high-entropy Cron secret inside its handler.
 [functions.export-account]
 verify_jwt = false
 
 [functions.delete-account]
+verify_jwt = false
+
+[functions.process-storage-cleanup]
 verify_jwt = false
 
 # [edge_runtime.secrets]

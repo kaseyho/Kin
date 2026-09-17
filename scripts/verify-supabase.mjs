@@ -4,11 +4,15 @@ function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: process.cwd(),
     encoding: 'utf8',
-    stdio: options.capture ? 'pipe' : 'inherit',
+    stdio: options.capture || options.quiet ? 'pipe' : 'inherit',
   });
   if (options.capture) return result;
   if (result.error) throw result.error;
   if (result.status !== 0) {
+    if (options.quiet) {
+      process.stdout.write(result.stdout ?? '');
+      process.stderr.write(result.stderr ?? '');
+    }
     throw new Error(`${command} ${args.join(' ')} exited with status ${result.status ?? 'unknown'}.`);
   }
   return result;
@@ -36,7 +40,7 @@ let startedHere = false;
 
 try {
   if (!wasRunning) {
-    run('supabase', ['start']);
+    run('supabase', ['start'], { quiet: true });
     startedHere = true;
   }
   run('supabase', ['db', 'reset']);

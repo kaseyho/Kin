@@ -62,6 +62,8 @@ Use only public client values in `.env`:
 
 ```dotenv
 EXPO_PUBLIC_KIN_ENVIRONMENT=development
+EXPO_PUBLIC_KIN_PUBLIC_URL=http://localhost:8081
+EXPO_PUBLIC_KIN_SUPPORT_EMAIL=support@YOUR_REAL_DOMAIN.com
 EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YOUR_PUBLIC_KEY
 EXPO_PUBLIC_REVENUECAT_IOS_API_KEY=appl_YOUR_PUBLIC_KEY
@@ -71,7 +73,10 @@ EXPO_PUBLIC_REVENUECAT_WEB_API_KEY=rcb_YOUR_PUBLIC_KEY
 
 Loopback HTTP Supabase URLs and legacy local anon JWTs are accepted only in `development`. Preview and production require HTTPS plus an `sb_publishable_` key. Keys beginning `sb_secret_` and service-role values are rejected.
 
-The connected repository is not a production release gate yet: the account-lifecycle plan must replace its temporary anonymous identity with email OTP before consumer deployment.
+Connected Kin uses email OTP and never falls back to anonymous auth. Use a real routable support
+address for hosted development; the `.example` value above is a placeholder and is rejected by
+preview/production validation. Use the public web origin that serves `/invite/<code>` for
+`EXPO_PUBLIC_KIN_PUBLIC_URL`.
 
 ## Verification
 
@@ -80,6 +85,7 @@ Run the complete credential-free CI equivalent:
 ```bash
 npm run verify:ci
 npm run e2e
+npm run test:database
 ```
 
 This executes:
@@ -90,6 +96,7 @@ This executes:
 - a demo-profile production web export;
 - production dependency policy, which fails for high or critical advisories and reports moderate findings;
 - Playwright phone and wide-browser flows against a fresh demo server.
+- local migration, pgTAP, RLS, concurrency, retention, and account-cleanup proof through Docker.
 
 Focused commands remain available:
 
@@ -100,6 +107,7 @@ npm test
 npm run verify:environment
 npm run export:web:demo
 npm run audit:production
+npm run test:database
 ```
 
 Playwright owns port 8081 and deliberately refuses to reuse a running server. Stop another local Expo process on that port before starting E2E.
@@ -127,13 +135,15 @@ These commands are intentionally not part of credential-free verification.
 
 ### Local Supabase
 
-Requires a running Docker daemon:
+Requires a running Docker daemon. The checked-in command starts, resets, tests, and stops the local
+stack when it was not already running:
 
 ```bash
-supabase start
-supabase db reset
-supabase test db
+npm run test:database
 ```
+
+See `docs/runbooks/space-safety.md` for the covered invariants, report moderation, hosted three-account
+smoke, and durable Storage cleanup retry.
 
 ### Hosted Supabase
 
@@ -168,4 +178,6 @@ A successful EAS build does not prove App Store or Google Play approval. Record 
 
 ## Production work tracker
 
-The complete product contract is in `docs/superpowers/specs/2026-09-14-kin-production-readiness-design.md`. The current executable phase is `docs/superpowers/plans/2026-09-14-kin-production-foundation.md`; its follow-on plan list covers auth/account lifecycle, backend safety, messaging/notifications, billing, UI completion, and deployment/submission.
+The product contract is in `docs/superpowers/specs/2026-09-14-kin-production-readiness-design.md`.
+Completed implementation plans live under `docs/superpowers/plans/`; remaining production gates are
+tracked by the messaging/notifications, billing, UI-completion, and deployment/submission phases.

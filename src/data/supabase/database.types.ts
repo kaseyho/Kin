@@ -39,14 +39,41 @@ export interface Database {
       }>;
       content_reports: Table<{
         id: string;
-        reporter_id: string;
+        reporter_id: string | null;
         reported_user_id: string | null;
         space_id: string | null;
         message_id: string | null;
         category: string;
         explanation: string;
         status: 'open' | 'reviewing' | 'resolved' | 'dismissed';
+        status_updated_at: string;
         created_at: string;
+        retention_expires_at: string;
+      }>;
+      account_storage_cleanup_jobs: Table<{
+        id: string;
+        operation_id: string;
+        owner_id: string;
+        bucket_id: 'avatars' | 'chat-media';
+        target_kind: 'object' | 'prefix';
+        target_path: string;
+        status: 'prepared' | 'pending' | 'processing' | 'completed';
+        attempts: number;
+        last_error_code: string;
+        created_at: string;
+        updated_at: string;
+        processing_started_at: string | null;
+        processing_token: string | null;
+        completed_at: string | null;
+      }>;
+      operator_maintenance_status: Table<{
+        worker: 'storage-cleanup';
+        last_started_at: string | null;
+        last_succeeded_at: string | null;
+        last_status: 'never' | 'running' | 'succeeded' | 'incomplete';
+        last_claimed: number;
+        last_failed: number;
+        updated_at: string;
       }>;
     };
     Views: Record<string, never>;
@@ -54,6 +81,39 @@ export interface Database {
       prepare_account_deletion: {
         Args: { target_user_id: string };
         Returns: undefined;
+      };
+      prepare_account_storage_cleanup: {
+        Args: { target_operation_id: string; target_user_id: string };
+        Returns: number;
+      };
+      claim_account_storage_cleanup_jobs: {
+        Args: {
+          target_operation_id?: string | null;
+          target_owner_id?: string | null;
+          maximum_jobs?: number;
+        };
+        Returns: {
+          id: string;
+          operation_id: string;
+          owner_id: string;
+          bucket_id: 'avatars' | 'chat-media';
+          target_kind: 'object' | 'prefix';
+          target_path: string;
+          attempts: number;
+          processing_token: string;
+        }[];
+      };
+      purge_finished_storage_cleanup_jobs: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      purge_expired_content_reports: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      update_content_report_status: {
+        Args: { target_report_id: string; next_status: string };
+        Returns: boolean;
       };
       redeem_space_invite: {
         Args: { invite_code: string };

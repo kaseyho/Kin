@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(18);
+select plan(24);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -11,13 +11,17 @@ insert into auth.users (
 values
   ('11000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'owner@space.test', extensions.crypt('password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
   ('11000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'partner@space.test', extensions.crypt('password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
-  ('11000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'stranger@space.test', extensions.crypt('password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');
+  ('11000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'stranger@space.test', extensions.crypt('password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  ('11000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'leaver@space.test', extensions.crypt('password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  ('11000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'remaining@space.test', extensions.crypt('password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');
 
 insert into public.profiles (id, display_name)
 values
   ('11000000-0000-0000-0000-000000000001', 'Owner'),
   ('11000000-0000-0000-0000-000000000002', 'Partner'),
-  ('11000000-0000-0000-0000-000000000003', 'Stranger');
+  ('11000000-0000-0000-0000-000000000003', 'Stranger'),
+  ('11000000-0000-0000-0000-000000000004', 'Leaver'),
+  ('11000000-0000-0000-0000-000000000005', 'Remaining member');
 
 create temporary table space_test_state (
   label text primary key,
@@ -377,6 +381,170 @@ begin
 end;
 $$;
 select pass('a blocked pair cannot reconnect through another Space invitation');
+
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000004', true);
+
+insert into space_test_state (label, value)
+select 'leave_space', public.create_kin_space('Remaining member', null)::text;
+
+insert into space_test_state (label, value)
+select 'leave_invite', invite.code
+from public.space_invites invite
+where invite.space_id = (select value::uuid from space_test_state where label = 'leave_space')
+  and invite.revoked_at is null;
+
+select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000005', true);
+select public.redeem_space_invite((select value from space_test_state where label = 'leave_invite'));
+
+select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000004', true);
+insert into public.messages (id, space_id, sender_id, kind, body)
+values (
+  '31000000-0000-0000-0000-000000000002',
+  (select value::uuid from space_test_state where label = 'leave_space'),
+  auth.uid(),
+  'text',
+  'Shared history remains available'
+);
+insert into public.memory_items (
+  id, space_id, created_by, kind, visibility, title, occurred_on
+)
+values
+  (
+    '41000000-0000-0000-0000-000000000001',
+    (select value::uuid from space_test_state where label = 'leave_space'),
+    auth.uid(),
+    'moment',
+    'shared',
+    'Shared memory',
+    current_date
+  ),
+  (
+    '41000000-0000-0000-0000-000000000002',
+    (select value::uuid from space_test_state where label = 'leave_space'),
+    auth.uid(),
+    'moment',
+    'private',
+    'Leaver private memory',
+    current_date
+  );
+
+reset role;
+insert into public.space_invites (space_id, created_by, code)
+values (
+  (select value::uuid from space_test_state where label = 'leave_space'),
+  '11000000-0000-0000-0000-000000000004',
+  'LEAVE123'
+);
+insert into storage.objects (bucket_id, name, owner_id)
+values (
+  'chat-media',
+  format(
+    '%s/%s/leave-proof.jpg',
+    (select value from space_test_state where label = 'leave_space'),
+    '11000000-0000-0000-0000-000000000004'
+  ),
+  '11000000-0000-0000-0000-000000000004'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000004', true);
+select public.leave_kin_space((select value::uuid from space_test_state where label = 'leave_space'));
+
+do $$
+begin
+  if (select count(*) from public.kin_spaces where id = (select value::uuid from space_test_state where label = 'leave_space')) <> 0
+    or (select count(*) from public.messages where space_id = (select value::uuid from space_test_state where label = 'leave_space')) <> 0
+    or (select count(*) from public.memory_items where space_id = (select value::uuid from space_test_state where label = 'leave_space')) <> 0
+    or (select count(*) from storage.objects where bucket_id = 'chat-media' and name like (select value from space_test_state where label = 'leave_space') || '/%') <> 0 then
+    raise exception 'Space lifecycle failed: leaver retained a relationship or Storage read path';
+  end if;
+end;
+$$;
+select pass('leaving removes every relationship and Storage read path for the leaver');
+
+select throws_ok(
+  format(
+    'insert into public.messages (space_id, sender_id, kind, body) values (%L::uuid, %L::uuid, %L, %L)',
+    (select value from space_test_state where label = 'leave_space'),
+    auth.uid(),
+    'text',
+    'This write must fail'
+  ),
+  '42501',
+  null,
+  'a leaver cannot write another message'
+);
+
+select throws_ok(
+  format(
+    'insert into storage.objects (bucket_id, name, owner_id) values (%L, %L, %L)',
+    'chat-media',
+    (select value from space_test_state where label = 'leave_space') || '/11000000-0000-0000-0000-000000000004/after-leave.jpg',
+    auth.uid()::text
+  ),
+  '42501',
+  null,
+  'a leaver cannot upload media after access loss'
+);
+
+select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000005', true);
+do $$
+begin
+  if (select count(*) from public.kin_spaces where id = (select value::uuid from space_test_state where label = 'leave_space')) <> 1
+    or (select count(*) from public.messages where space_id = (select value::uuid from space_test_state where label = 'leave_space')) <> 1
+    or (select count(*) from public.memory_items where title = 'Shared memory') <> 1
+    or (select count(*) from public.memory_items where title = 'Leaver private memory') <> 0
+    or (select count(*) from storage.objects where bucket_id = 'chat-media' and name like (select value from space_test_state where label = 'leave_space') || '/%') <> 1 then
+    raise exception 'Space lifecycle failed: remaining member content policy was not preserved';
+  end if;
+end;
+$$;
+select pass('the remaining member keeps shared history but cannot read the leaver private memory');
+
+reset role;
+select ok(
+  exists (
+    select 1 from public.space_invites
+    where code = 'LEAVE123'
+      and revoked_at is not null
+  ),
+  'leaving revokes unused invitations for the Space'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000003', true);
+insert into space_test_state (label, value)
+select 'last_member_space', public.create_kin_space('Absent partner', null)::text;
+
+reset role;
+insert into storage.objects (bucket_id, name, owner_id)
+values (
+  'chat-media',
+  (select value from space_test_state where label = 'last_member_space') || '/11000000-0000-0000-0000-000000000003/final.jpg',
+  '11000000-0000-0000-0000-000000000003'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000003', true);
+select public.leave_kin_space((select value::uuid from space_test_state where label = 'last_member_space'));
+
+reset role;
+select ok(
+  not exists (
+    select 1 from public.kin_spaces
+    where id = (select value::uuid from space_test_state where label = 'last_member_space')
+  )
+  and exists (
+    select 1 from public.account_storage_cleanup_jobs
+    where bucket_id = 'chat-media'
+      and target_kind = 'object'
+      and target_path = (select value from space_test_state where label = 'last_member_space') || '/11000000-0000-0000-0000-000000000003/final.jpg'
+      and status = 'pending'
+  ),
+  'the last member leaving deletes the empty Space and durably queues its media'
+);
 
 reset role;
 select * from finish();

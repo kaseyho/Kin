@@ -14,9 +14,10 @@ consumer flow obtains by verifying a fresh six-digit email OTP.
 - **Delete account** explains the content outcome, emails a fresh OTP without creating a new user,
   verifies six digits, requires the exact text `DELETE`, and then calls the privileged function.
 - Deletion removes the user's profile, authored messages, reactions, memories, memberships,
-  preferences, invitations, and owned media. A Kin Space with another member transfers ownership
-  to that member; an empty Space is deleted. The client signs out only after the function returns
-  `{ "deleted": true }`.
+  preferences, invitations, and blocks. A Kin Space with another member transfers ownership to that
+  member; an empty Space is deleted. Reports remain pseudonymized for the documented 180-day safety
+  retention period and are excluded from export/UI reads. Owned media is durably queued and retried.
+  The client signs out only after the function returns `{ "deleted": true }`.
 
 ## Required server configuration
 
@@ -25,6 +26,10 @@ The Edge runtime supplies these built-in secrets for a linked Supabase project:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY` or `SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+
+The scheduled cleanup function additionally requires a random, server-only
+`KIN_CLEANUP_CRON_SECRET`. Store the same value in Supabase Edge Function secrets and Vault as
+described in `docs/runbooks/space-safety.md`; it must never be an `EXPO_PUBLIC_` value.
 
 Never place the service-role key in `.env`, EAS `EXPO_PUBLIC_` variables, client logs, screenshots,
 or Devpost materials. Configure production SMTP in Supabase Auth before enabling consumer signup.
@@ -38,10 +43,12 @@ From the repository root, after `supabase login` and `supabase link --project-re
 npx supabase db push
 npx supabase functions deploy export-account --no-verify-jwt
 npx supabase functions deploy delete-account --no-verify-jwt
+npx supabase functions deploy process-storage-cleanup --no-verify-jwt
 ```
 
-`--no-verify-jwt` is intentional: each handler calls Supabase Auth `getUser` with the supplied bearer
-token and returns Kin-owned error codes. Do not remove that in-handler validation.
+`--no-verify-jwt` is intentional: consumer handlers call Supabase Auth `getUser` with the supplied
+bearer token, while the scheduled worker compares a dedicated high-entropy secret. Do not remove
+either in-handler check.
 
 Before deploying to production, run:
 
@@ -64,21 +71,33 @@ Use two disposable email accounts that share one Kin Space:
    `chat-media/<space-id>/<deleted-user-id>/` prefix are empty.
 7. Verify the Auth user, profile, memberships, preferences, authored messages, reactions, memories,
    and invitations are absent.
+8. Verify reports involving the account remain with the deleted identity fields set to `NULL` and a
+   future `retention_expires_at`.
+9. Verify the deletion operation's Storage cleanup jobs are `completed`.
+10. Verify the `kin-storage-cleanup` Cron invocation returns 2xx, then leave an empty Space and
+    confirm its queued media is removed without a manual worker run.
 
-Do not call this production-verified until all seven checks pass against the hosted project.
+Do not call this production-verified until all ten checks pass against the hosted project.
 
 ## Partial-failure recovery
 
 Deletion crosses Storage, public tables, and Auth, so it cannot be one transaction across all
-providers. The function removes owned storage first, prepares Space ownership in one database
-transaction, then deletes the Auth user.
+providers. The function first discovers account-owned objects through Storage ownership metadata and
+records durable `prepared` cleanup jobs. Auth deletion then cascades to the profile; a database
+trigger transfers or removes Spaces in that same database transaction. Only after profile absence is
+confirmed can cleanup jobs be atomically claimed and Storage objects removed.
 
-- If Storage cleanup fails, database/Auth deletion does not start. The consumer may safely retry.
-- If ownership preparation fails, Auth deletion does not start. Inspect the operation ID in the
-  function log and retry after repairing the database issue.
-- If Auth Admin deletion fails after preparation, the account still exists but some owned media may
-  already be gone and Space ownership may have transferred. Record the operation ID, disable access
-  if necessary, rerun deletion from an authenticated fresh session, and verify every hosted check.
+- If Storage cleanup fails after Auth deletion, deletion still returns success with
+  `cleanupPending: true`. Use `npm run cleanup:storage` from a server-only operator shell; do not ask
+  the deleted consumer to sign in again.
+- If cleanup-job preparation fails, Auth deletion does not start. Inspect the operation ID, repair the
+  database issue, and retry from the still-authenticated account.
+- If Auth Admin reports an error and the profile still exists, the function returns
+  `auth_deletion_failed`; no Space mutation has occurred and jobs remain safely `prepared`.
+- If Auth Admin reports an error but the profile is already absent, the function treats the database
+  state as authoritative and finishes cleanup. If the profile lookup itself fails, it returns
+  `deletion_state_unknown`; preserve the operation ID and run the retry worker after checking whether
+  the profile exists. Prepared jobs are never activated while a live profile exists.
 - If the client reports that the account was deleted but local sign-out failed, ask the user to
   close and reopen Kin; the server identity is already gone.
 
@@ -90,11 +109,11 @@ message bodies, email addresses, tokens, storage paths, provider errors, or expo
 When a user reports a failed export or deletion, request only the approximate time, platform, and
 operation ID shown by support tooling. Never ask for an OTP, access token, exported JSON, or private
 conversation content. Confirm completion by server records and storage prefixes, then tell the user
-what was removed and whether any manual cleanup remains.
+what was removed and whether any manual cleanup remains. Detailed moderation and cleanup commands
+are in `docs/runbooks/space-safety.md`.
 
 ## Current external gate
 
-The handlers type-check without credentials. Runtime proof requires a running local Supabase stack
-or a linked hosted development project. Docker is not available in the current workspace and no
-hosted project credentials are configured, so SMTP delivery, transactional cleanup, Storage
-removal, and Auth Admin deletion remain external deployment gates.
+The handlers type-check without credentials, and the local Docker pgTAP suite proves database/RLS
+cleanup policy. End-to-end SMTP delivery, Storage API removal, and Auth Admin deletion still require
+a linked hosted preview project and the controlled-account smoke in `docs/runbooks/space-safety.md`.
