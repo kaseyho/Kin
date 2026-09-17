@@ -11,6 +11,7 @@ import {
   type SpaceInvitation,
   type UserProfile,
 } from '@/domain/models';
+import { MAX_MESSAGE_IMAGE_BYTES, MESSAGE_IMAGE_MIME_TYPES } from '@/services/media/contracts';
 import type {
   AddReactionInput,
   BlockSpaceMemberInput,
@@ -447,6 +448,24 @@ class DemoKinRepository implements KinRepository {
     const body = input.body.trim();
     if (!body && !input.mediaUri) {
       throw new RepositoryError('message_invalid', 'Write a message or choose something to send.');
+    }
+    if (
+      input.kind === 'image'
+      && (
+        !input.mediaUri
+        || !input.mediaMimeType
+        || !MESSAGE_IMAGE_MIME_TYPES.includes(input.mediaMimeType)
+        || input.mediaByteSize === undefined
+        || !Number.isFinite(input.mediaByteSize)
+        || input.mediaByteSize < 1
+        || input.mediaByteSize > MAX_MESSAGE_IMAGE_BYTES
+      )
+    ) {
+      throw new RepositoryError(
+        'message_invalid',
+        'Choose a processed JPEG, PNG, or WebP image that is 10 MB or smaller.',
+        'reenter',
+      );
     }
 
     const message: Message = {

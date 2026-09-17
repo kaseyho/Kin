@@ -140,6 +140,8 @@ export function ChatScreen({
         kind: 'image',
         body: 'Shared photo',
         mediaUri: image.uri,
+        mediaByteSize: image.byteSize,
+        mediaMimeType: image.mimeType,
       });
     } catch (reason) {
       setNotice(reason instanceof Error ? reason.message : 'Kin could not open that photo.');

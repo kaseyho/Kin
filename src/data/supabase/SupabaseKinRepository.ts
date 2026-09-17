@@ -13,6 +13,7 @@ import {
   type SpaceInvitation,
   type UserProfile,
 } from '@/domain/models';
+import { MAX_MESSAGE_IMAGE_BYTES, MESSAGE_IMAGE_MIME_TYPES } from '@/services/media/contracts';
 import type {
   AddReactionInput,
   BlockSpaceMemberInput,
@@ -377,6 +378,7 @@ class SupabaseKinRepository implements KinRepository {
     const senderId = requireEntity(snapshot.currentUserId, 'Create your profile before messaging.');
     const body = input.body.trim();
     if (!body && !input.mediaUri) throw new RepositoryError('message_invalid', 'Write a message or choose something to send.');
+    validateMessageMediaInput(input);
     const message: Message = {
       body,
       createdAt: new Date().toISOString(),
@@ -391,14 +393,16 @@ class SupabaseKinRepository implements KinRepository {
     this.setCachedMessage(message);
     let storedMediaUri: string | null = null;
     try {
-      storedMediaUri = message.mediaUri
+      storedMediaUri = message.kind === 'image' && message.mediaUri
         ? await uploadKinMedia(this.client, {
+            byteSize: input.mediaByteSize,
             mediaId: message.id,
+            mimeType: input.mediaMimeType,
             sourceUri: message.mediaUri,
             spaceId: message.spaceId,
             userId: senderId,
           })
-        : null;
+        : message.mediaUri ?? null;
       if (storedMediaUri) this.messageMediaReferences.set(message.id, storedMediaUri);
     } catch {
       const failed = { ...message, deliveryState: 'failed' as const };
@@ -429,14 +433,14 @@ class SupabaseKinRepository implements KinRepository {
     this.setCachedMessage({ ...message, deliveryState: 'sending' });
     let storedMediaUri: string | null = null;
     try {
-      storedMediaUri = this.messageMediaReferences.get(message.id) ?? (message.mediaUri
+      storedMediaUri = this.messageMediaReferences.get(message.id) ?? (message.kind === 'image' && message.mediaUri
         ? await uploadKinMedia(this.client, {
             mediaId: message.id,
             sourceUri: message.mediaUri,
             spaceId: message.spaceId,
             userId: message.senderId,
           })
-        : null);
+        : message.mediaUri ?? null);
       if (storedMediaUri) this.messageMediaReferences.set(message.id, storedMediaUri);
     } catch {
       this.setCachedMessage(message);
@@ -782,6 +786,25 @@ function mergeMessages(
   const byId = new Map(existing.map((message) => [message.id, message]));
   for (const message of incoming) byId.set(message.id, message);
   return [...byId.values()];
+}
+
+function validateMessageMediaInput(input: SendMessageInput): void {
+  if (input.kind !== 'image') return;
+  if (
+    !input.mediaUri
+    || !input.mediaMimeType
+    || !MESSAGE_IMAGE_MIME_TYPES.includes(input.mediaMimeType)
+    || input.mediaByteSize === undefined
+    || !Number.isFinite(input.mediaByteSize)
+    || input.mediaByteSize < 1
+    || input.mediaByteSize > MAX_MESSAGE_IMAGE_BYTES
+  ) {
+    throw new RepositoryError(
+      'message_invalid',
+      'Choose a processed JPEG, PNG, or WebP image that is 10 MB or smaller.',
+      'reenter',
+    );
+  }
 }
 
 function assertResult(

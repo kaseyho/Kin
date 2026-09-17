@@ -13,6 +13,7 @@ import type {
   SpaceInvitation,
   UserProfile,
 } from '@/domain/models';
+import type { MessageImageMimeType } from '@/services/media/contracts';
 
 export interface StorageAdapter {
   getItem(key: string): Promise<string | null>;
@@ -62,6 +63,8 @@ export interface SendMessageInput {
   kind: MessageKind;
   body: string;
   mediaUri?: string;
+  mediaByteSize?: number;
+  mediaMimeType?: MessageImageMimeType;
 }
 
 export interface AddReactionInput {

@@ -439,6 +439,8 @@ describe('SupabaseKinRepository production messaging', () => {
     const failed = await repository.sendMessage({
       body: 'Photo',
       kind: 'image',
+      mediaByteSize: 4,
+      mediaMimeType: 'image/jpeg',
       mediaUri: 'https://images.kin.test/photo.jpg',
       spaceId: SPACE_ID,
     });
@@ -462,6 +464,8 @@ describe('SupabaseKinRepository production messaging', () => {
     const failed = await repository.sendMessage({
       body: 'Photo',
       kind: 'image',
+      mediaByteSize: 4,
+      mediaMimeType: 'image/jpeg',
       mediaUri: 'https://images.kin.test/photo.jpg',
       spaceId: SPACE_ID,
     });
@@ -471,6 +475,64 @@ describe('SupabaseKinRepository production messaging', () => {
     expect(fake.removedMediaPaths).toEqual([`${SPACE_ID}/${USER_ID}/${failed.id}.jpg`]);
     expect((await repository.load()).messages).toEqual([]);
     fetchSpy.mockRestore();
+  });
+
+  it('retains a failed bubble object when an ambiguous response already stored the message', async () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      arrayBuffer: async () => new ArrayBuffer(4),
+      ok: true,
+    } as Response);
+    const fake = createFakeClient({ ambiguousSendOnce: true });
+    const repository = createSupabaseKinRepository(fake.client);
+    await repository.load();
+    const failed = await repository.sendMessage({
+      body: 'Photo',
+      kind: 'image',
+      mediaByteSize: 4,
+      mediaMimeType: 'image/jpeg',
+      mediaUri: 'https://images.kin.test/photo.jpg',
+      spaceId: SPACE_ID,
+    });
+
+    await repository.removeFailedMessage(failed.id);
+
+    expect(fake.serverMessages.some((message) => message.id === failed.id)).toBe(true);
+    expect(fake.removedMediaPaths).toEqual([]);
+    fetchSpy.mockRestore();
+  });
+
+  it('rejects unsafe image metadata before reading or uploading bytes', async () => {
+    const fake = createFakeClient();
+    const repository = createSupabaseKinRepository(fake.client);
+    await repository.load();
+
+    await expect(repository.sendMessage({
+      body: 'Too large',
+      kind: 'image',
+      mediaByteSize: 10 * 1024 * 1024 + 1,
+      mediaMimeType: 'image/jpeg',
+      mediaUri: 'file:///too-large.jpg',
+      spaceId: SPACE_ID,
+    })).rejects.toMatchObject({ code: 'message_invalid' });
+
+    expect(fake.uploadedMediaPaths).toEqual([]);
+  });
+
+  it('keeps bundled stickers out of private Storage', async () => {
+    const fake = createFakeClient();
+    const repository = createSupabaseKinRepository(fake.client);
+    await repository.load();
+
+    const sent = await repository.sendMessage({
+      body: 'Jamie cooking',
+      kind: 'sticker',
+      mediaUri: 'asset://kin/sticker-jamie-chef',
+      spaceId: SPACE_ID,
+    });
+
+    expect(sent.deliveryState).toBe('sent');
+    expect(fake.uploadedMediaPaths).toEqual([]);
+    expect(fake.serverMessages.at(-1)?.media_uri).toBe('asset://kin/sticker-jamie-chef');
   });
 
   it('reconciles a realtime server echo into the optimistic UUID without duplication', async () => {

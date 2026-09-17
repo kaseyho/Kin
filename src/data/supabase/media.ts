@@ -1,5 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  MAX_MESSAGE_IMAGE_BYTES,
+  MESSAGE_IMAGE_MIME_TYPES,
+  MediaValidationError,
+  type MessageImageMimeType,
+} from '@/services/media/contracts';
 import type { Database } from './database.types';
 
 const MEDIA_BUCKET = 'chat-media';
@@ -27,13 +33,29 @@ export function readMediaStorageReference(uri: string): string | null {
 
 export async function uploadKinMedia(
   client: SupabaseClient<Database>,
-  input: { mediaId: string; sourceUri: string; spaceId: string; userId: string },
+  input: {
+    byteSize?: number;
+    mediaId: string;
+    mimeType?: MessageImageMimeType;
+    sourceUri: string;
+    spaceId: string;
+    userId: string;
+  },
 ): Promise<string> {
   if (readMediaStorageReference(input.sourceUri)) return input.sourceUri;
+  if (input.mimeType && !MESSAGE_IMAGE_MIME_TYPES.includes(input.mimeType)) {
+    throw new MediaValidationError('Choose a JPEG, PNG, or WebP image.');
+  }
+  if (input.byteSize !== undefined && (!Number.isFinite(input.byteSize) || input.byteSize < 1 || input.byteSize > MAX_MESSAGE_IMAGE_BYTES)) {
+    throw new MediaValidationError('That processed image must be 10 MB or smaller.');
+  }
   const path = buildMediaObjectPath(input.spaceId, input.userId, input.sourceUri, input.mediaId);
   const bytes = await readMediaBytes(input.sourceUri);
+  if (bytes.byteLength < 1 || bytes.byteLength > MAX_MESSAGE_IMAGE_BYTES) {
+    throw new MediaValidationError('That processed image must be 10 MB or smaller.');
+  }
   const result = await client.storage.from(MEDIA_BUCKET).upload(path, bytes, {
-    contentType: contentTypeForPath(path),
+    contentType: input.mimeType ?? contentTypeForPath(path),
     upsert: true,
   });
   if (result.error) throw result.error;

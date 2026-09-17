@@ -99,6 +99,7 @@ describe('ChatScreen', () => {
   it('sends a selected image and leaves text messaging usable after cancellation', async () => {
     const selectedPicker: MediaPicker = {
       pickImage: async () => ({
+        byteSize: 2_000_000,
         uri: 'file:///date-night.jpg',
         width: 1200,
         height: 900,
