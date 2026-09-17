@@ -57,11 +57,15 @@ export function AuthProvider({ accountService, children, service }: AuthProvider
     (email) => service.requestOtp(email),
     [service],
   );
-  const verifyOtp = useCallback<AuthService['verifyOtp']>(
-    (email, token) => service.verifyOtp(email, token),
-    [service],
-  );
-  const signOut = useCallback<AuthService['signOut']>(() => service.signOut(), [service]);
+  const verifyOtp = useCallback<AuthService['verifyOtp']>(async (email, token) => {
+    const user = await service.verifyOtp(email, token);
+    setState({ status: 'signed-in', user });
+    return user;
+  }, [service]);
+  const signOut = useCallback<AuthService['signOut']>(async () => {
+    await service.signOut();
+    setState({ status: 'signed-out' });
+  }, [service]);
 
   const value = useMemo<AuthContextValue>(
     () => ({ accountService, requestOtp, signOut, state, verifyOtp }),

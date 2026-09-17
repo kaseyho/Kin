@@ -47,7 +47,11 @@ describe('createAppRuntime', () => {
 
     expect(runtime).toEqual({
       accountService,
-      environment: { deployment: 'demo', mode: 'demo' },
+      environment: {
+        deployment: 'demo',
+        mode: 'demo',
+        publicAppUrl: 'https://demo.kin.invalid',
+      },
       authService,
       premiumService,
       repository,
@@ -101,6 +105,7 @@ describe('createAppRuntime', () => {
       environment: {
         deployment: 'development',
         mode: 'connected',
+        publicAppUrl: 'http://localhost:8081',
         supabasePublishableKey: 'eyJ-development-test-key',
         supabaseUrl: 'http://127.0.0.1:54321',
       },

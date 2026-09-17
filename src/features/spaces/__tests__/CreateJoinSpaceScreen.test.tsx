@@ -21,6 +21,27 @@ describe('CreateJoinSpaceScreen', () => {
     expect(onSpaceReady).toHaveBeenCalledWith('space-2');
   });
 
+  it('hands a newly created invitation to the waiting screen', async () => {
+    const repository = createTestRepository();
+    await repository.saveProfile({ displayName: 'Maya', avatarUri: 'asset://kin/maya' });
+    const onInvitationReady = jest.fn();
+    const onSpaceReady = jest.fn();
+    const user = userEvent.setup();
+    await renderKin(
+      <CreateJoinSpaceScreen
+        onInvitationReady={onInvitationReady}
+        onSpaceReady={onSpaceReady}
+      />,
+      repository,
+    );
+
+    await user.type(screen.getByLabelText('Who is this Space with?'), 'Jamie');
+    await user.press(screen.getByRole('button', { name: 'Create our Kin Space' }));
+
+    expect(onInvitationReady).toHaveBeenCalledWith('KIN123', 'space-2');
+    expect(onSpaceReady).not.toHaveBeenCalled();
+  });
+
   it('keeps an invalid invitation available for correction', async () => {
     const repository = createTestRepository();
     await repository.saveProfile({ displayName: 'Maya', avatarUri: 'asset://kin/maya' });

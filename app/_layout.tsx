@@ -63,7 +63,7 @@ function AuthenticatedApp({
   const auth = useAuth();
   const kinActive = auth.state.status === 'demo' || auth.state.status === 'signed-in';
   const kinSessionKey = auth.state.status === 'signed-in' ? auth.state.user.id : auth.state.status;
-  const productAvailable = auth.state.status === 'demo' || auth.state.status === 'signed-in';
+  const productAvailable = auth.state.status !== 'signed-out';
   const authAvailable = auth.state.status === 'signed-out';
 
   return (
@@ -78,6 +78,7 @@ function AuthenticatedApp({
           }}
         >
           <Stack.Screen name="index" />
+          <Stack.Screen name="invite/[code]" />
           <Stack.Protected guard={authAvailable}>
             <Stack.Screen name="auth" />
           </Stack.Protected>
@@ -88,6 +89,7 @@ function AuthenticatedApp({
             <Stack.Screen name="moment/[momentId]" />
             <Stack.Screen name="space/new" />
             <Stack.Screen name="space/[spaceId]" />
+            <Stack.Screen name="space/[spaceId]/invitation" />
             <Stack.Screen name="space/[spaceId]/relationship" />
             <Stack.Screen name="space/[spaceId]/timeline" />
           </Stack.Protected>

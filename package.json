@@ -13,13 +13,14 @@
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "test:database": "node scripts/verify-supabase.mjs",
-    "export:web": "expo export --platform web",
-    "export:web:demo": "EXPO_PUBLIC_KIN_ENVIRONMENT=demo expo export --platform web",
+    "export:web": "expo export --platform web --clear",
+    "export:web:demo": "EXPO_PUBLIC_KIN_ENVIRONMENT=demo expo export --platform web --clear",
     "e2e": "playwright test",
     "audit:production": "npm audit --omit=dev --json | node scripts/check-audit.mjs",
     "verify:environment": "node scripts/verify-environment.mjs",
+    "verify:bundle-config": "node scripts/verify-production-bundle.mjs",
     "verify": "npm run verify:environment && npm run typecheck && npm run lint && npm test && npm run export:web:demo",
-    "verify:ci": "npm run verify && npm run typecheck:functions && npm run audit:production"
+    "verify:ci": "npm run verify && npm run verify:bundle-config && npm run typecheck:functions && npm run audit:production"
   },
   "repository": {
     "type": "git",
@@ -42,6 +43,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.116.0",
     "expo": "^57.0.22",
+    "expo-clipboard": "~57.0.2",
     "expo-constants": "~57.0.18",
     "expo-file-system": "~57.0.7",
     "expo-haptics": "~57.0.3",

@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
@@ -7,12 +7,21 @@ import { readDemoDate } from '@/config/demoDate';
 import { ChatScreen } from '@/features/chats/ChatScreen';
 import { RelationshipPanel } from '@/features/spaces/RelationshipPanel';
 import { expoMediaPicker } from '@/services/media/expo';
+import { useKin } from '@/state/useKin';
 
 export default function SpaceRoute() {
   const { demoDate: rawDemoDate, spaceId } = useLocalSearchParams<{ demoDate?: string; spaceId: string }>();
   const demoDate = readDemoDate(rawDemoDate);
+  const kin = useKin();
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const space = kin.snapshot?.spaces.find((item) => item.id === spaceId);
+  const memberCount = kin.snapshot?.members.filter((member) => member.spaceId === spaceId).length;
+  if (kin.status === 'ready' && space && memberCount !== undefined && memberCount < 2) {
+    return (
+      <Redirect href={{ pathname: '/space/[spaceId]/invitation', params: { spaceId } }} />
+    );
+  }
   const conversation = (
     <ChatScreen
       mediaPicker={expoMediaPicker}

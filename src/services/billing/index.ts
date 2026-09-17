@@ -1,6 +1,10 @@
 import { Platform } from 'react-native';
 
-import { ConfigurationError, type KinDeployment } from '@/config/environment';
+import {
+  ConfigurationError,
+  type KinDeployment,
+  readPublicEnvironmentValues,
+} from '@/config/environment';
 import type { StorageAdapter } from '@/data/contracts';
 import { BillingError, type PremiumService } from './contracts';
 import { createDemoPremiumService } from './demo';
@@ -26,7 +30,7 @@ export function createPremiumService(
     deployment,
     platform = Platform.OS,
     storage,
-    values = process.env,
+    values = readPublicEnvironmentValues(),
   }: PremiumServiceOptions,
   factories: PremiumServiceFactories = defaultFactories,
 ): PremiumService {

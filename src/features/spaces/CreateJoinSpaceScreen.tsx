@@ -15,10 +15,14 @@ import type { ISODate } from '@/domain/models';
 import { useKin } from '@/state/useKin';
 
 interface CreateJoinSpaceScreenProps {
+  onInvitationReady?: (inviteCode: string, spaceId: string) => void;
   onSpaceReady: (spaceId: string) => void;
 }
 
-export function CreateJoinSpaceScreen({ onSpaceReady }: CreateJoinSpaceScreenProps) {
+export function CreateJoinSpaceScreen({
+  onInvitationReady,
+  onSpaceReady,
+}: CreateJoinSpaceScreenProps) {
   const kin = useKin();
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [name, setName] = useState('');
@@ -38,7 +42,11 @@ export function CreateJoinSpaceScreen({ onSpaceReady }: CreateJoinSpaceScreenPro
               relationshipStartDate: startDate.trim() ? (startDate.trim() as ISODate) : undefined,
             })
           : await kin.joinSpace({ inviteCode });
-      onSpaceReady(space.id);
+      if (mode === 'create' && space.activeInvitation && onInvitationReady) {
+        onInvitationReady(space.activeInvitation.code, space.id);
+      } else {
+        onSpaceReady(space.id);
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Kin could not open that Space.');
     } finally {

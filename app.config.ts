@@ -1,43 +1,117 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
-  ...config,
-  name: 'Kin',
-  slug: 'kin',
-  owner: 'moondrunk',
-  scheme: 'kin',
-  version: '1.0.0',
-  orientation: 'portrait',
-  userInterfaceStyle: 'light',
-  ios: {
-    ...config.ios,
-    bundleIdentifier: 'com.kaseyho.kin',
-    supportsTablet: true,
-  },
-  android: {
-    ...config.android,
-    blockedPermissions: ['android.permission.RECORD_AUDIO'],
-    package: 'com.kaseyho.kin',
-  },
-  web: {
-    ...config.web,
-    bundler: 'metro',
-    output: 'single',
-  },
-  plugins: [
-    'expo-router',
-    [
-      'expo-image-picker',
-      {
-        cameraPermission: false,
-        microphonePermission: false,
-        photosPermission: 'Choose photos to share privately in Kin.',
-      },
+type BuildDeployment = 'demo' | 'development' | 'preview' | 'production';
+
+export default ({ config }: ConfigContext): ExpoConfig => {
+  const environment = readBuildEnvironment();
+  const publicUrl = new URL(environment.publicAppUrl);
+  const verifiedWebDomain = publicUrl.protocol === 'https:'
+    && !publicUrl.hostname.endsWith('.invalid')
+    && !isLoopbackHostname(publicUrl.hostname);
+  const invitationPath = `${publicUrl.pathname.replace(/\/$/, '')}/invite`;
+
+  return {
+    ...config,
+    name: 'Kin',
+    slug: 'kin',
+    owner: 'moondrunk',
+    scheme: 'kin',
+    version: '1.0.0',
+    orientation: 'portrait',
+    userInterfaceStyle: 'light',
+    ios: {
+      ...config.ios,
+      ...(verifiedWebDomain
+        ? { associatedDomains: [`applinks:${publicUrl.hostname}`] }
+        : {}),
+      bundleIdentifier: 'com.kaseyho.kin',
+      supportsTablet: true,
+    },
+    android: {
+      ...config.android,
+      ...(verifiedWebDomain
+        ? {
+            intentFilters: [
+              {
+                action: 'VIEW',
+                autoVerify: true,
+                category: ['BROWSABLE', 'DEFAULT'],
+                data: [{ host: publicUrl.hostname, pathPrefix: invitationPath, scheme: 'https' }],
+              },
+            ],
+          }
+        : {}),
+      blockedPermissions: ['android.permission.RECORD_AUDIO'],
+      package: 'com.kaseyho.kin',
+    },
+    web: {
+      ...config.web,
+      bundler: 'metro',
+      output: 'single',
+    },
+    plugins: [
+      'expo-router',
+      [
+        'expo-image-picker',
+        {
+          cameraPermission: false,
+          microphonePermission: false,
+          photosPermission: 'Choose photos to share privately in Kin.',
+        },
+      ],
     ],
-  ],
-  experiments: { typedRoutes: true },
-  extra: {
-    ...config.extra,
-    kinEnvironment: process.env.EXPO_PUBLIC_KIN_ENVIRONMENT,
-  },
-});
+    experiments: { typedRoutes: true },
+    extra: {
+      ...config.extra,
+      kinEnvironment: environment.deployment,
+      kinPublicUrl: environment.publicAppUrl,
+    },
+  };
+};
+
+function readBuildEnvironment(): { deployment: BuildDeployment; publicAppUrl: string } {
+  const deployment = process.env.EXPO_PUBLIC_KIN_ENVIRONMENT?.trim();
+  if (!isBuildDeployment(deployment)) {
+    throw new Error('Set EXPO_PUBLIC_KIN_ENVIRONMENT before evaluating the Expo config.');
+  }
+  if (deployment === 'demo') {
+    return { deployment, publicAppUrl: 'https://demo.kin.invalid' };
+  }
+
+  const configuredUrl = process.env.EXPO_PUBLIC_KIN_PUBLIC_URL?.trim()
+    || (deployment === 'development' ? 'http://localhost:8081' : '');
+  try {
+    const url = new URL(configuredUrl);
+    const isLoopback = isLoopbackHostname(url.hostname);
+    const allowedProtocol = url.protocol === 'https:'
+      || (deployment === 'development' && url.protocol === 'http:' && isLoopback);
+    if (
+      !allowedProtocol
+      || (deployment !== 'development' && isLoopback)
+      || !url.hostname
+      || url.username
+      || url.password
+      || url.search
+      || url.hash
+    ) {
+      throw new Error('invalid public URL');
+    }
+    url.pathname = url.pathname.replace(/\/+$/, '') || '/';
+    return { deployment, publicAppUrl: url.toString().replace(/\/$/, '') };
+  } catch {
+    throw new Error('Kin requires a public HTTPS app URL outside local development.');
+  }
+}
+
+function isBuildDeployment(value: string | undefined): value is BuildDeployment {
+  return value === 'demo' || value === 'development' || value === 'preview' || value === 'production';
+}
+
+function isLoopbackHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  return normalized === 'localhost'
+    || normalized.endsWith('.localhost')
+    || normalized === '::1'
+    || normalized === '[::1]'
+    || /^127(?:\.\d{1,3}){3}$/.test(normalized);
+}

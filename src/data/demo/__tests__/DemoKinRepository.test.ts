@@ -110,6 +110,20 @@ describe('DemoKinRepository', () => {
     expect((await repository.load()).memories).toHaveLength(0);
   });
 
+  it('refreshes a persisted invitation status when it expires', async () => {
+    let now = '2026-09-01T00:00:00.000Z';
+    const repository = createDemoKinRepository(createMemoryStorage(), {
+      inviteCode: () => 'KIN123',
+      now: () => now,
+    });
+    await repository.saveProfile({ displayName: 'Maya', avatarUri: '' });
+    await repository.createSpace({ otherDisplayName: 'Jamie' });
+
+    now = '2026-09-20T00:00:00.000Z';
+
+    expect((await repository.load()).spaces[0].activeInvitation?.status).toBe('expired');
+  });
+
   it('joins a known invitation and keeps an invalid code recoverable', async () => {
     const storage = createMemoryStorage(JSON.stringify({
       currentUserId: 'maya',

@@ -163,6 +163,7 @@ describe('AuthProvider', () => {
     await act(async () => fireEvent.press(screen.getByText('Request code')));
     await act(async () => fireEvent.press(screen.getByText('Verify code')));
     expect(screen.getByText('user-1')).toBeTruthy();
+    expect(screen.getByText('signed-in:maya@example.com')).toBeTruthy();
 
     await act(async () => fireEvent.press(screen.getByText('Sign out')));
     expect(screen.getByText('signed-out')).toBeTruthy();

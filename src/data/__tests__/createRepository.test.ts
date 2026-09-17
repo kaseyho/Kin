@@ -25,6 +25,7 @@ it('selects only the explicitly configured repository', () => {
 
   createRepository(storage, {
     EXPO_PUBLIC_KIN_ENVIRONMENT: 'preview',
+    EXPO_PUBLIC_KIN_PUBLIC_URL: 'https://preview.kin.example',
     EXPO_PUBLIC_SUPABASE_URL: 'https://kin.supabase.co',
     EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_example',
   }, factories);

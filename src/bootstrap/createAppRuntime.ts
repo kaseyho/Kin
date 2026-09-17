@@ -1,7 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { KinEnvironment, EnvironmentValues } from '@/config/environment';
-import { ConfigurationError, readEnvironment } from '@/config/environment';
+import {
+  ConfigurationError,
+  readEnvironment,
+  readPublicEnvironmentValues,
+} from '@/config/environment';
 import type { KinRepository, StorageAdapter } from '@/data/contracts';
 import { createDemoKinRepository } from '@/data/demo/DemoKinRepository';
 import { createSupabaseClient } from '@/data/supabase/client';
@@ -88,7 +92,7 @@ function requireConnectedClient(
 
 export function createAppRuntime(
   storage: StorageAdapter,
-  values: EnvironmentValues = process.env,
+  values: EnvironmentValues = readPublicEnvironmentValues(),
   factories: RuntimeFactories = defaultFactories,
 ): AppRuntime {
   try {

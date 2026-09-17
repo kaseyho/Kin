@@ -1,4 +1,4 @@
-import { readEnvironment } from '@/config/environment';
+import { readEnvironment, readPublicEnvironmentValues } from '@/config/environment';
 import type { KinRepository, StorageAdapter } from './contracts';
 import { createDemoKinRepository } from './demo/DemoKinRepository';
 import { createSupabaseClient } from './supabase/client';
@@ -23,7 +23,7 @@ const defaultFactories: RepositoryFactories = {
 
 export function createRepository(
   storage: StorageAdapter,
-  values: Record<string, string | undefined> = process.env,
+  values: Record<string, string | undefined> = readPublicEnvironmentValues(),
   factories: RepositoryFactories = defaultFactories,
 ): KinRepository {
   const environment = readEnvironment(values);

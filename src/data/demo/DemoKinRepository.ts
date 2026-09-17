@@ -95,7 +95,10 @@ class DemoKinRepository implements KinRepository {
   }
 
   async load(): Promise<KinSnapshot> {
-    if (this.snapshot) return clone(this.snapshot);
+    if (this.snapshot) {
+      this.snapshot = refreshDemoInvitationStatuses(this.snapshot, this.now());
+      return clone(this.snapshot);
+    }
 
     const stored = await this.storage.getItem(STORAGE_KEY);
     if (stored === null) {
@@ -106,7 +109,7 @@ class DemoKinRepository implements KinRepository {
     try {
       const parsed: unknown = JSON.parse(stored);
       if (!isSnapshot(parsed)) throw new Error('Unsupported Kin snapshot');
-      this.snapshot = parsed;
+      this.snapshot = refreshDemoInvitationStatuses(parsed, this.now());
       return clone(this.snapshot);
     } catch {
       throw new RepositoryError(
@@ -782,6 +785,20 @@ function getDemoInvitationStatus(
   }
   if (invitation.expiresAt <= now) return 'expired';
   return 'active';
+}
+
+function refreshDemoInvitationStatuses(snapshot: KinSnapshot, now: string): KinSnapshot {
+  const next = clone(snapshot);
+  next.spaces = next.spaces.map((space) => {
+    if (!space.activeInvitation) return space;
+    const status = getDemoInvitationStatus(space.activeInvitation, now);
+    if (status === space.activeInvitation.status) return space;
+    return {
+      ...space,
+      activeInvitation: { ...space.activeInvitation, status },
+    };
+  });
+  return next;
 }
 
 function isBlockedPair(
