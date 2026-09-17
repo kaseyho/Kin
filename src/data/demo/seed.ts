@@ -8,6 +8,7 @@ export function createEmptySnapshot(): KinSnapshot {
     spaces: [],
     members: [],
     messages: [],
+    messagePages: {},
     memories: [],
   };
 }
@@ -142,6 +143,14 @@ export function createDemoSnapshot(): KinSnapshot {
         deliveryState: 'sent',
       },
     ],
+    messagePages: {
+      'space-maya-jamie': {
+        hasOlderMessages: false,
+        loadedCount: 8,
+        oldestCreatedAt: '2025-12-05T13:41:00.000Z',
+        oldestMessageId: 'message-first-date',
+      },
+    },
     memories: [
       {
         id: 'memory-lanterns',

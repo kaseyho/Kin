@@ -113,6 +113,9 @@ export interface KinRepository {
   submitContentReport(input: SubmitContentReportInput): Promise<ContentReportReceipt>;
   sendMessage(input: SendMessageInput): Promise<Message>;
   retryMessage(messageId: Id): Promise<Message>;
+  removeFailedMessage(messageId: Id): Promise<void>;
+  loadOlderMessages(spaceId: Id): Promise<Message[]>;
+  markSpaceRead(spaceId: Id): Promise<void>;
   addReaction(input: AddReactionInput): Promise<Message>;
   updateSpacePreferences(input: UpdateSpacePreferencesInput): Promise<KinSpace>;
   saveMemory(input: SaveMemoryInput): Promise<MemoryItem>;

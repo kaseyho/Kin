@@ -96,7 +96,9 @@ class DemoKinRepository implements KinRepository {
 
   async load(): Promise<KinSnapshot> {
     if (this.snapshot) {
-      this.snapshot = refreshDemoInvitationStatuses(this.snapshot, this.now());
+      this.snapshot = normalizeDemoMessagePages(
+        refreshDemoInvitationStatuses(this.snapshot, this.now()),
+      );
       return clone(this.snapshot);
     }
 
@@ -109,7 +111,9 @@ class DemoKinRepository implements KinRepository {
     try {
       const parsed: unknown = JSON.parse(stored);
       if (!isSnapshot(parsed)) throw new Error('Unsupported Kin snapshot');
-      this.snapshot = refreshDemoInvitationStatuses(parsed, this.now());
+      this.snapshot = normalizeDemoMessagePages(
+        refreshDemoInvitationStatuses(parsed, this.now()),
+      );
       return clone(this.snapshot);
     } catch {
       throw new RepositoryError(
@@ -476,6 +480,28 @@ class DemoKinRepository implements KinRepository {
     return this.setMessageState(messageId, 'sent');
   }
 
+  async removeFailedMessage(messageId: Id): Promise<void> {
+    const snapshot = await this.current();
+    const message = this.requireMessage(snapshot, messageId);
+    if (message.deliveryState !== 'failed') return;
+    const next = clone(snapshot);
+    next.messages = next.messages.filter((item) => item.id !== messageId);
+    await this.commit(next);
+  }
+
+  async loadOlderMessages(spaceId: Id): Promise<Message[]> {
+    const snapshot = await this.current();
+    const currentProfile = this.requireCurrentProfile(snapshot);
+    this.requireMembership(snapshot, spaceId, currentProfile.id);
+    return [];
+  }
+
+  async markSpaceRead(spaceId: Id): Promise<void> {
+    const snapshot = await this.current();
+    const currentProfile = this.requireCurrentProfile(snapshot);
+    this.requireMembership(snapshot, spaceId, currentProfile.id);
+  }
+
   async addReaction(input: AddReactionInput): Promise<Message> {
     const snapshot = await this.current();
     const currentProfile = this.requireCurrentProfile(snapshot);
@@ -721,7 +747,7 @@ class DemoKinRepository implements KinRepository {
   }
 
   private async commit(snapshot: KinSnapshot): Promise<KinSnapshot> {
-    const canonical = clone(snapshot);
+    const canonical = normalizeDemoMessagePages(clone(snapshot));
     await this.storage.setItem(STORAGE_KEY, JSON.stringify(canonical));
     this.snapshot = canonical;
     for (const listener of this.listeners) listener(clone(canonical));
@@ -801,6 +827,26 @@ function refreshDemoInvitationStatuses(snapshot: KinSnapshot, now: string): KinS
   return next;
 }
 
+function normalizeDemoMessagePages(snapshot: KinSnapshot): KinSnapshot {
+  const existingPages = snapshot.messagePages ?? {};
+  const messagePages: KinSnapshot['messagePages'] = {};
+  for (const space of snapshot.spaces) {
+    const messages = snapshot.messages
+      .filter((message) => message.spaceId === space.id)
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+    const oldest = messages[0];
+    messagePages[space.id] = {
+      hasOlderMessages: existingPages[space.id]?.hasOlderMessages ?? false,
+      loadedCount: messages.length,
+      ...(oldest ? {
+        oldestCreatedAt: oldest.createdAt,
+        oldestMessageId: oldest.id,
+      } : {}),
+    };
+  }
+  return { ...snapshot, messagePages };
+}
+
 function isBlockedPair(
   block: DemoSafetyState['blocks'][number],
   firstUserId: Id,
@@ -825,6 +871,9 @@ function removeSpaces(snapshot: KinSnapshot, spaceIds: ReadonlySet<Id>): KinSnap
   next.spaces = next.spaces.filter((space) => !spaceIds.has(space.id));
   next.members = next.members.filter((member) => !spaceIds.has(member.spaceId));
   next.messages = next.messages.filter((message) => !spaceIds.has(message.spaceId));
+  next.messagePages = Object.fromEntries(
+    Object.entries(next.messagePages).filter(([spaceId]) => !spaceIds.has(spaceId)),
+  );
   next.memories = next.memories.filter((memory) => !spaceIds.has(memory.spaceId));
   return next;
 }

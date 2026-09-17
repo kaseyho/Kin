@@ -34,7 +34,7 @@ export async function uploadKinMedia(
   const bytes = await readMediaBytes(input.sourceUri);
   const result = await client.storage.from(MEDIA_BUCKET).upload(path, bytes, {
     contentType: contentTypeForPath(path),
-    upsert: false,
+    upsert: true,
   });
   if (result.error) throw result.error;
   return toMediaStorageReference(result.data.path);
@@ -51,6 +51,16 @@ export async function resolveKinMedia(
     .createSignedUrl(path, SIGNED_URL_LIFETIME_SECONDS);
   if (result.error) throw result.error;
   return result.data.signedUrl;
+}
+
+export async function deleteKinMedia(
+  client: SupabaseClient<Database>,
+  uri: string,
+): Promise<void> {
+  const path = readMediaStorageReference(uri);
+  if (!path) return;
+  const result = await client.storage.from(MEDIA_BUCKET).remove([path]);
+  if (result.error) throw result.error;
 }
 
 async function readMediaBytes(uri: string): Promise<ArrayBuffer> {

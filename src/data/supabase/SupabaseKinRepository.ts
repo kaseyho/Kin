@@ -9,6 +9,7 @@ import {
   type KinSpace,
   type MemoryItem,
   type Message,
+  type MessagePageState,
   type SpaceInvitation,
   type UserProfile,
 } from '@/domain/models';
@@ -30,7 +31,7 @@ import type {
 } from '../contracts';
 import { RepositoryError, type RepositoryErrorCode } from '../errors';
 import type { Database } from './database.types';
-import { resolveKinMedia, uploadKinMedia } from './media';
+import { deleteKinMedia, resolveKinMedia, uploadKinMedia } from './media';
 import { requireAuthenticatedUserId } from './requireAuthenticatedUser';
 import {
   mapMember,
@@ -61,6 +62,7 @@ class SupabaseKinRepository implements KinRepository {
   private channel: RealtimeChannel | null = null;
   private realtimeSpaceKey = '';
   private refreshing = false;
+  private readonly messageMediaReferences = new Map<Id, string>();
 
   constructor(private readonly client: SupabaseClient<Database>) {}
 
@@ -81,6 +83,7 @@ class SupabaseKinRepository implements KinRepository {
         members: [],
         memories: [],
         messages: [],
+        messagePages: {},
         profiles: ownProfileRows.map(mapProfile),
         schemaVersion: 1,
         spaces: [],
@@ -89,23 +92,43 @@ class SupabaseKinRepository implements KinRepository {
       return clone(this.snapshot);
     }
 
-    const [spacesResult, membersResult, themesResult, messagesResult, memoriesResult, invitesResult] =
+    const [spacesResult, membersResult, themesResult, memoriesResult, invitesResult] =
       await Promise.all([
         this.client.from('kin_spaces').select('*').in('id', spaceIds),
         this.client.from('kin_space_members').select('*').in('space_id', spaceIds).is('left_at', null),
         this.client.from('space_themes').select('*').in('space_id', spaceIds),
-        this.client.from('messages').select('*').in('space_id', spaceIds).order('created_at'),
         this.client.from('memory_items').select('*').in('space_id', spaceIds).order('occurred_on'),
         this.client.from('space_invites').select('*').in('space_id', spaceIds).order('created_at', { ascending: false }),
       ]);
-    for (const result of [spacesResult, membersResult, themesResult, messagesResult, memoriesResult, invitesResult]) {
+    for (const result of [spacesResult, membersResult, themesResult, memoriesResult, invitesResult]) {
       assertResult(result.error, 'load_failed', 'Kin could not finish loading this relationship.', 'reconnect');
+    }
+
+    const messagePageResults = await Promise.all(spaceIds.map(async (spaceId) => ({
+      result: await this.client.rpc('list_space_messages', {
+        before_created_at: null,
+        before_message_id: null,
+        page_size: 51,
+        target_space_id: spaceId,
+      }),
+      spaceId,
+    })));
+    for (const { result } of messagePageResults) {
+      assertResult(result.error, 'load_failed', 'Kin could not load recent messages.', 'reconnect');
     }
 
     const spaces = (spacesResult.data ?? []) as SpaceRow[];
     const members = (membersResult.data ?? []) as MemberRow[];
     const themes = (themesResult.data ?? []) as ThemeRow[];
-    const storedMessageRows = (messagesResult.data ?? []) as MessageRow[];
+    const newestRowsBySpace = new Map<Id, MessageRow[]>();
+    const freshMessagePages: Record<Id, MessagePageState> = {};
+    for (const { result, spaceId } of messagePageResults) {
+      const probedRows = (result.data ?? []) as MessageRow[];
+      const visibleRows = probedRows.slice(0, 50);
+      newestRowsBySpace.set(spaceId, visibleRows);
+      freshMessagePages[spaceId] = pageStateForRows(visibleRows, probedRows.length > 50);
+    }
+    const storedMessageRows = [...newestRowsBySpace.values()].flat();
     const storedMemoryRows = (memoriesResult.data ?? []) as MemoryRow[];
     const invites = (invitesResult.data ?? []) as InviteRow[];
     const profileIds = [...new Set(members.map((item) => item.user_id))];
@@ -127,14 +150,11 @@ class SupabaseKinRepository implements KinRepository {
     const profiles = (profilesResult.data ?? []) as ProfileRow[];
     const reactions = (reactionsResult.data ?? []) as ReactionRow[];
     const links = (linksResult.data ?? []) as MemoryMessageRow[];
-    let messageRows: MessageRow[];
+    let messages: Message[];
     let memoryRows: MemoryRow[];
     try {
-      [messageRows, memoryRows] = await Promise.all([
-        Promise.all(storedMessageRows.map(async (row) => ({
-          ...row,
-          media_uri: row.media_uri ? await resolveKinMedia(this.client, row.media_uri) : null,
-        }))),
+      [messages, memoryRows] = await Promise.all([
+        this.hydrateMessageRows(storedMessageRows, reactions),
         Promise.all(storedMemoryRows.map(async (row) => ({
           ...row,
           media_uris: await Promise.all(row.media_uris.map((uri) => resolveKinMedia(this.client, uri))),
@@ -148,11 +168,32 @@ class SupabaseKinRepository implements KinRepository {
       );
     }
 
+    const previous = this.snapshot;
+    const activeSpaceIds = new Set(spaceIds);
+    const preservedMessages = previous?.messages.filter((message) => activeSpaceIds.has(message.spaceId)) ?? [];
+    const mergedMessages = mergeMessages(preservedMessages, messages);
+    const messagePages = { ...freshMessagePages };
+    for (const spaceId of spaceIds) {
+      const previousPage = previous?.messagePages[spaceId];
+      if (previousPage && previousPage.loadedCount > 50) {
+        messagePages[spaceId] = {
+          ...previousPage,
+          loadedCount: mergedMessages.filter((message) => message.spaceId === spaceId).length,
+        };
+      } else {
+        messagePages[spaceId] = {
+          ...messagePages[spaceId],
+          loadedCount: mergedMessages.filter((message) => message.spaceId === spaceId).length,
+        };
+      }
+    }
+
     this.snapshot = {
       currentUserId: userId,
       members: members.map(mapMember),
       memories: memoryRows.map((row) => mapMemory(row, links)),
-      messages: messageRows.map((row) => mapMessage(row, reactions)),
+      messages: mergedMessages,
+      messagePages,
       profiles: profiles.map(mapProfile),
       schemaVersion: 1,
       spaces: spaces.map((row) => mapSpace(row, members, themes, invites)),
@@ -349,26 +390,25 @@ class SupabaseKinRepository implements KinRepository {
             userId: senderId,
           })
         : null;
+      if (storedMediaUri) this.messageMediaReferences.set(message.id, storedMediaUri);
     } catch {
       const failed = { ...message, deliveryState: 'failed' as const };
       this.setCachedMessage(failed);
       return failed;
     }
-    const result = await this.client.from('messages').insert({
-      body,
-      created_at: message.createdAt,
-      id: message.id,
-      kind: message.kind,
-      media_uri: storedMediaUri,
-      sender_id: senderId,
-      space_id: message.spaceId,
+    const result = await this.client.rpc('send_kin_message', {
+      client_message_id: message.id,
+      message_body: body,
+      message_kind: message.kind,
+      message_media_uri: storedMediaUri,
+      target_space_id: message.spaceId,
     });
-    if (result.error) {
+    if (result.error || !result.data) {
       const failed = { ...message, deliveryState: 'failed' as const };
       this.setCachedMessage(failed);
       return failed;
     }
-    const sent = { ...message, deliveryState: 'sent' as const };
+    const sent = await this.hydrateSentMessage(firstRow(result.data), message);
     this.setCachedMessage(sent);
     return sent;
   }
@@ -377,31 +417,120 @@ class SupabaseKinRepository implements KinRepository {
     const snapshot = this.snapshot ?? await this.load();
     const message = requireEntity(snapshot.messages.find((item) => item.id === messageId), 'That message could not be found.');
     if (message.deliveryState !== 'failed') return message;
+    this.setCachedMessage({ ...message, deliveryState: 'sending' });
     let storedMediaUri: string | null = null;
     try {
-      storedMediaUri = message.mediaUri
+      storedMediaUri = this.messageMediaReferences.get(message.id) ?? (message.mediaUri
         ? await uploadKinMedia(this.client, {
-            mediaId: `${message.id}-retry-${Date.now()}`,
+            mediaId: message.id,
             sourceUri: message.mediaUri,
             spaceId: message.spaceId,
             userId: message.senderId,
           })
-        : null;
+        : null);
+      if (storedMediaUri) this.messageMediaReferences.set(message.id, storedMediaUri);
     } catch {
+      this.setCachedMessage(message);
       return message;
     }
-    const result = await this.client.from('messages').insert({
-      body: message.body,
-      created_at: message.createdAt,
-      id: message.id,
-      kind: message.kind,
-      media_uri: storedMediaUri,
-      sender_id: message.senderId,
-      space_id: message.spaceId,
+    const result = await this.client.rpc('send_kin_message', {
+      client_message_id: message.id,
+      message_body: message.body,
+      message_kind: message.kind,
+      message_media_uri: storedMediaUri,
+      target_space_id: message.spaceId,
     });
-    const updated = { ...message, deliveryState: result.error ? 'failed' as const : 'sent' as const };
+    const updated = result.error || !result.data
+      ? message
+      : await this.hydrateSentMessage(firstRow(result.data), message);
     this.setCachedMessage(updated);
     return updated;
+  }
+
+  async removeFailedMessage(messageId: Id): Promise<void> {
+    const snapshot = this.snapshot ?? await this.load();
+    const message = requireEntity(
+      snapshot.messages.find((item) => item.id === messageId),
+      'That message could not be found.',
+    );
+    if (message.deliveryState !== 'failed') return;
+    const durableReference = this.messageMediaReferences.get(message.id);
+    this.snapshot = {
+      ...snapshot,
+      messagePages: {
+        ...snapshot.messagePages,
+        [message.spaceId]: {
+          ...snapshot.messagePages[message.spaceId],
+          loadedCount: Math.max(0, (snapshot.messagePages[message.spaceId]?.loadedCount ?? 1) - 1),
+        },
+      },
+      messages: snapshot.messages.filter((item) => item.id !== message.id),
+    };
+    this.messageMediaReferences.delete(message.id);
+    this.emit(this.snapshot);
+    if (!durableReference || [...this.messageMediaReferences.values()].includes(durableReference)) return;
+    try {
+      const referenced = await this.client.from('messages').select('id').eq('media_uri', durableReference).limit(1);
+      if (!referenced.error && (referenced.data ?? []).length === 0) {
+        await deleteKinMedia(this.client, durableReference);
+      }
+    } catch {
+      // Removing a failed local bubble must remain available even if best-effort cleanup is offline.
+    }
+  }
+
+  async loadOlderMessages(spaceId: Id): Promise<Message[]> {
+    const snapshot = this.snapshot ?? await this.load();
+    const page = snapshot.messagePages[spaceId];
+    if (!page?.hasOlderMessages || !page.oldestCreatedAt || !page.oldestMessageId) return [];
+    const result = await this.client.rpc('list_space_messages', {
+      before_created_at: page.oldestCreatedAt,
+      before_message_id: page.oldestMessageId,
+      page_size: 51,
+      target_space_id: spaceId,
+    });
+    assertResult(result.error, 'load_failed', 'Kin could not load older messages.', 'retry');
+    const probedRows = ((result.data ?? []) as MessageRow[]);
+    const visibleRows = probedRows.slice(0, 50);
+    const messageIds = visibleRows.map((row) => row.id);
+    const reactionsResult = messageIds.length
+      ? await this.client.from('message_reactions').select('*').in('message_id', messageIds)
+      : { data: [], error: null };
+    assertResult(reactionsResult.error, 'load_failed', 'Kin could not load older reactions.', 'retry');
+    let messages: Message[];
+    try {
+      messages = await this.hydrateMessageRows(
+        visibleRows,
+        (reactionsResult.data ?? []) as ReactionRow[],
+      );
+    } catch {
+      throw new RepositoryError(
+        'load_failed',
+        'Kin could not open older private media. Try again.',
+        'retry',
+      );
+    }
+    const merged = mergeMessages(snapshot.messages, messages);
+    this.snapshot = {
+      ...snapshot,
+      messagePages: {
+        ...snapshot.messagePages,
+        [spaceId]: {
+          ...pageStateForRows(visibleRows, probedRows.length > 50),
+          loadedCount: merged.filter((message) => message.spaceId === spaceId).length,
+        },
+      },
+      messages: merged,
+    };
+    this.emit(this.snapshot);
+    return clone(messages);
+  }
+
+  async markSpaceRead(spaceId: Id): Promise<void> {
+    const result = await this.client.rpc('mark_space_read', { target_space_id: spaceId });
+    if (result.error) {
+      throw mapLifecycleError(result.error, 'save_failed', 'Kin could not mark that Space read.', 'retry');
+    }
   }
 
   async addReaction(input: AddReactionInput): Promise<Message> {
@@ -493,6 +622,36 @@ class SupabaseKinRepository implements KinRepository {
     throw new RepositoryError('unavailable', 'Local-copy deletion applies only to demo data. Archive this connected Space instead.');
   }
 
+  private async hydrateMessageRows(
+    rows: readonly MessageRow[],
+    reactions: readonly ReactionRow[],
+  ): Promise<Message[]> {
+    return Promise.all(rows.map(async (row) => {
+      const previousReference = this.messageMediaReferences.get(row.id);
+      const cached = this.snapshot?.messages.find((message) => message.id === row.id);
+      if (row.media_uri) this.messageMediaReferences.set(row.id, row.media_uri);
+      const mapped = mapMessage(row, reactions);
+      if (!row.media_uri) return mapped;
+      if (cached?.mediaUri && previousReference === row.media_uri) {
+        return { ...mapped, mediaUri: cached.mediaUri };
+      }
+      return { ...mapped, mediaUri: await resolveKinMedia(this.client, row.media_uri) };
+    }));
+  }
+
+  private async hydrateSentMessage(row: MessageRow, optimistic: Message): Promise<Message> {
+    if (row.media_uri) this.messageMediaReferences.set(row.id, row.media_uri);
+    try {
+      const [message] = await this.hydrateMessageRows([row], []);
+      return requireEntity(message, 'Kin received an empty message result.');
+    } catch {
+      return {
+        ...mapMessage(row, []),
+        ...(optimistic.mediaUri ? { mediaUri: optimistic.mediaUri } : {}),
+      };
+    }
+  }
+
   private async ensureUserId(): Promise<string> {
     return requireAuthenticatedUserId(this.client.auth);
   }
@@ -500,8 +659,19 @@ class SupabaseKinRepository implements KinRepository {
   private setCachedMessage(message: Message) {
     if (!this.snapshot) return;
     const exists = this.snapshot.messages.some((item) => item.id === message.id);
+    const currentPage = this.snapshot.messagePages[message.spaceId] ?? {
+      hasOlderMessages: false,
+      loadedCount: 0,
+    };
     this.snapshot = {
       ...this.snapshot,
+      messagePages: {
+        ...this.snapshot.messagePages,
+        [message.spaceId]: {
+          ...currentPage,
+          loadedCount: currentPage.loadedCount + (exists ? 0 : 1),
+        },
+      },
       messages: exists
         ? this.snapshot.messages.map((item) => item.id === message.id ? message : item)
         : [...this.snapshot.messages, message],
@@ -572,6 +742,30 @@ function toMemoryRow(memory: MemoryItem) {
     updated_at: memory.updatedAt,
     visibility: memory.visibility,
   };
+}
+
+function pageStateForRows(
+  rows: readonly MessageRow[],
+  hasOlderMessages: boolean,
+): MessagePageState {
+  const oldest = rows.at(-1);
+  return {
+    hasOlderMessages,
+    loadedCount: rows.length,
+    ...(oldest ? {
+      oldestCreatedAt: oldest.created_at,
+      oldestMessageId: oldest.id,
+    } : {}),
+  };
+}
+
+function mergeMessages(
+  existing: readonly Message[],
+  incoming: readonly Message[],
+): Message[] {
+  const byId = new Map(existing.map((message) => [message.id, message]));
+  for (const message of incoming) byId.set(message.id, message);
+  return [...byId.values()];
 }
 
 function assertResult(

@@ -92,6 +92,13 @@ export interface Message {
   deliveryState: DeliveryState;
 }
 
+export interface MessagePageState {
+  hasOlderMessages: boolean;
+  loadedCount: number;
+  oldestCreatedAt?: ISODateTime;
+  oldestMessageId?: Id;
+}
+
 export interface MemoryItem {
   id: Id;
   spaceId: Id;
@@ -115,6 +122,7 @@ export interface KinSnapshot {
   spaces: KinSpace[];
   members: SpaceMember[];
   messages: Message[];
+  messagePages: Record<Id, MessagePageState>;
   memories: MemoryItem[];
 }
 

@@ -45,6 +45,9 @@ export interface KinContextValue {
   ) => ReturnType<KinRepository['submitContentReport']>;
   sendMessage: (input: SendMessageInput) => ReturnType<KinRepository['sendMessage']>;
   retryMessage: (messageId: Id) => ReturnType<KinRepository['retryMessage']>;
+  removeFailedMessage: (messageId: Id) => ReturnType<KinRepository['removeFailedMessage']>;
+  loadOlderMessages: (spaceId: Id) => ReturnType<KinRepository['loadOlderMessages']>;
+  markSpaceRead: (spaceId: Id) => ReturnType<KinRepository['markSpaceRead']>;
   addReaction: (input: AddReactionInput) => ReturnType<KinRepository['addReaction']>;
   updateSpacePreferences: (
     input: UpdateSpacePreferencesInput,
@@ -132,6 +135,9 @@ export function KinProvider({ active = true, children, repository }: KinProvider
       submitContentReport: (input) => repository.submitContentReport(input),
       sendMessage: (input) => repository.sendMessage(input),
       retryMessage: (messageId) => repository.retryMessage(messageId),
+      removeFailedMessage: (messageId) => repository.removeFailedMessage(messageId),
+      loadOlderMessages: (spaceId) => repository.loadOlderMessages(spaceId),
+      markSpaceRead: (spaceId) => repository.markSpaceRead(spaceId),
       addReaction: (input) => repository.addReaction(input),
       updateSpacePreferences: (input) => repository.updateSpacePreferences(input),
       saveMemory: (input) => repository.saveMemory(input),

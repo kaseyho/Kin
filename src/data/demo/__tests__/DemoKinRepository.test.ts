@@ -135,6 +135,7 @@ describe('DemoKinRepository', () => {
       }],
       memories: [],
       messages: [],
+      messagePages: {},
       profiles: [
         { avatarUri: 'maya.png', createdAt: '2026-09-13T08:00:00.000Z', displayName: 'Maya', id: 'maya' },
         { avatarUri: 'jamie.png', createdAt: '2026-09-13T08:00:00.000Z', displayName: 'Jamie', id: 'jamie' },
@@ -256,6 +257,28 @@ describe('DemoKinRepository', () => {
     const retried = await repository.retryMessage(failed.id);
     expect(retried).toMatchObject({ id: failed.id, deliveryState: 'sent' });
     expect((await repository.load()).messages).toHaveLength(1);
+  });
+
+  it('exposes deterministic paging/read methods and removes a local failed send', async () => {
+    const repository = createDemoKinRepository(createMemoryStorage(), {
+      id: (kind) => `${kind}-1`,
+      inviteCode: () => 'KIN123',
+      now: () => '2026-09-13T08:00:00.000Z',
+      failNextSend: () => true,
+    });
+    await repository.saveProfile({ displayName: 'Maya', avatarUri: 'maya.png' });
+    const space = await repository.createSpace({ otherDisplayName: 'Jamie' });
+    const failed = await repository.sendMessage({
+      body: 'Remove me',
+      kind: 'text',
+      spaceId: space.id,
+    });
+
+    expect(await repository.loadOlderMessages(space.id)).toEqual([]);
+    await expect(repository.markSpaceRead(space.id)).resolves.toBeUndefined();
+    await repository.removeFailedMessage(failed.id);
+
+    expect((await repository.load()).messages).toEqual([]);
   });
 
   it('archives reversibly and requires exact confirmation for local deletion', async () => {
