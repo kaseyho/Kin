@@ -19,6 +19,7 @@ import { OnThisDayCard } from '@/features/moments/OnThisDayCard';
 import { UpcomingList } from '@/features/moments/UpcomingList';
 import { useKin } from '@/state/useKin';
 import { usePremiumGate } from '@/features/premium/usePremiumGate';
+import { ReportSheet } from '@/features/safety/ReportSheet';
 import { PersonalizeSpaceSheet } from './PersonalizeSpaceSheet';
 import { SpaceSafetyActions } from './SpaceSafetyActions';
 
@@ -46,6 +47,7 @@ export function RelationshipPanel({
   const kin = useKin();
   const premium = usePremiumGate();
   const [personalizing, setPersonalizing] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   if (kin.status === 'loading') {
     return <ScreenState message="Gathering what you have kept…" title="Your relationship" />;
@@ -178,10 +180,23 @@ export function RelationshipPanel({
           </View>
 
           <View style={styles.section} testID="relationship-safety">
-            <SpaceSafetyActions onSpaceUnavailable={onSpaceUnavailable} spaceId={spaceId} userId={userId} />
+            <SpaceSafetyActions
+              onReport={() => setReporting(true)}
+              onSpaceUnavailable={onSpaceUnavailable}
+              partnerName={partnerName}
+              spaceId={spaceId}
+              userId={userId}
+            />
           </View>
         </View>
       </ScrollView>
+      {reporting ? (
+        <ReportSheet
+          onClose={() => setReporting(false)}
+          spaceId={spaceId}
+          visible
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

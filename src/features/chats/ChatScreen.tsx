@@ -1,5 +1,16 @@
-import { useState } from 'react';
-import { Image, KeyboardAvoidingView, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import {
+  AccessibilityInfo,
+  findNodeHandle,
+  Image,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
@@ -10,6 +21,7 @@ import { colors, relationshipThemes, spacing, typography } from '@/design/tokens
 import type { MemoryKind } from '@/domain/models';
 import { MemoryEditorScreen } from '@/features/moments/MemoryEditorScreen';
 import { RememberSheet } from '@/features/moments/RememberSheet';
+import { ReportSheet } from '@/features/safety/ReportSheet';
 import type { MediaPicker } from '@/services/media/contracts';
 import { MediaPermissionError } from '@/services/media/contracts';
 import { useKin } from '@/state/useKin';
@@ -39,8 +51,10 @@ export function ChatScreen({
   const [showStickers, setShowStickers] = useState(false);
   const [rememberMessageId, setRememberMessageId] = useState<string | null>(null);
   const [rememberKind, setRememberKind] = useState<MemoryKind | null>(null);
+  const [reportMessageId, setReportMessageId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [noticeAction, setNoticeAction] = useState<null | { label: string; onPress: () => void }>(null);
+  const messageRefs = useRef(new Map<string, View>());
 
   if (kin.status === 'loading') return <ScreenState message="Opening your conversation…" title="Jamie" />;
   const snapshot = kin.snapshot;
@@ -59,6 +73,7 @@ export function ChatScreen({
     relationshipThemes.find((item) => item.id === space.preferencesByUser[currentUserId]?.themeId) ??
     relationshipThemes[0];
   const messages = snapshot.messages.filter((message) => message.spaceId === spaceId);
+  const selectedMessage = messages.find((message) => message.id === selectedMessageId);
   const wallpaperSource = kinWallpaperSource(space.preferencesByUser[currentUserId]?.wallpaperId);
 
   async function sendText() {
@@ -119,6 +134,25 @@ export function ChatScreen({
     else setRememberMessageId(messageId);
   }
 
+  function reportSelectedMessage() {
+    const messageId = selectedMessageId;
+    setSelectedMessageId(null);
+    if (messageId) setReportMessageId(messageId);
+  }
+
+  function closeMessageReport() {
+    const target = reportMessageId ? messageRefs.current.get(reportMessageId) : undefined;
+    setReportMessageId(null);
+    requestAnimationFrame(() => {
+      if (Platform.OS === 'web') {
+        (target as unknown as HTMLElement | undefined)?.focus?.();
+        return;
+      }
+      const handle = findNodeHandle(target ?? null);
+      if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+    });
+  }
+
   function closeRememberFlow() {
     setRememberKind(null);
     setRememberMessageId(null);
@@ -160,6 +194,10 @@ export function ChatScreen({
           currentUserId={currentUserId}
           messages={messages}
           onOpenActions={setSelectedMessageId}
+          onMessageRef={(messageId, node) => {
+            if (node) messageRefs.current.set(messageId, node);
+            else messageRefs.current.delete(messageId);
+          }}
           onRetry={(messageId) => void kin.retryMessage(messageId)}
           partnerName={partnerName}
           rememberedMessageIds={new Set(snapshot.memories.flatMap((memory) => memory.sourceMessageIds))}
@@ -191,8 +229,20 @@ export function ChatScreen({
         onClose={() => setSelectedMessageId(null)}
         onReact={(emoji) => void react(emoji)}
         onRemember={remember}
+        onReport={selectedMessage && selectedMessage.senderId !== currentUserId
+          ? reportSelectedMessage
+          : undefined}
+        reportIsDemo={kin.mode === 'demo'}
         visible={selectedMessageId !== null}
       />
+      {reportMessageId ? (
+        <ReportSheet
+          messageId={reportMessageId}
+          onClose={closeMessageReport}
+          spaceId={spaceId}
+          visible
+        />
+      ) : null}
       <RememberSheet
         onClose={closeRememberFlow}
         onSelect={setRememberKind}

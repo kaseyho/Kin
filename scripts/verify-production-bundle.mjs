@@ -10,6 +10,7 @@ const outputDirectory = await mkdtemp(join(tmpdir(), 'kin-production-bundle-'));
 const fixtures = {
   EXPO_PUBLIC_KIN_ENVIRONMENT: 'production',
   EXPO_PUBLIC_KIN_PUBLIC_URL: 'https://kin-bundle-fixture.example',
+  EXPO_PUBLIC_KIN_SUPPORT_EMAIL: 'support@kin-fixture.com',
   EXPO_PUBLIC_REVENUECAT_WEB_API_KEY: 'rcb_bundle_fixture',
   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_bundle_fixture',
   EXPO_PUBLIC_SUPABASE_URL: 'https://kin-bundle-fixture.supabase.co',
@@ -26,6 +27,7 @@ try {
         ...process.env,
         EXPO_PUBLIC_KIN_ENVIRONMENT: '',
         EXPO_PUBLIC_KIN_PUBLIC_URL: '',
+        EXPO_PUBLIC_KIN_SUPPORT_EMAIL: '',
         EXPO_PUBLIC_REVENUECAT_WEB_API_KEY: '',
         EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: '',
         EXPO_PUBLIC_SUPABASE_URL: '',

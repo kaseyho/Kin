@@ -15,6 +15,7 @@ describe('readEnvironment', () => {
       deployment: 'demo',
       mode: 'demo',
       publicAppUrl: 'https://demo.kin.invalid',
+      supportEmail: 'support@kin.invalid',
     });
   });
 
@@ -30,16 +31,37 @@ describe('readEnvironment', () => {
     expect(readEnvironment({
       EXPO_PUBLIC_KIN_ENVIRONMENT: 'production',
       EXPO_PUBLIC_KIN_PUBLIC_URL: 'https://kin.example/invite/',
+      EXPO_PUBLIC_KIN_SUPPORT_EMAIL: ' Support@Kin-App.com ',
       EXPO_PUBLIC_SUPABASE_URL: 'https://kin.supabase.co',
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_example',
     })).toEqual({
       deployment: 'production',
       mode: 'connected',
       publicAppUrl: 'https://kin.example/invite',
+      supportEmail: 'support@kin-app.com',
       supabasePublishableKey: 'sb_publishable_example',
       supabaseUrl: 'https://kin.supabase.co',
     });
   });
+
+  it.each(['preview', 'production'] as const)(
+    'requires a valid support email for %s',
+    (deployment) => {
+      expect(() => readEnvironment({
+        EXPO_PUBLIC_KIN_ENVIRONMENT: deployment,
+        EXPO_PUBLIC_KIN_PUBLIC_URL: 'https://kin.example',
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_example',
+        EXPO_PUBLIC_SUPABASE_URL: 'https://kin.supabase.co',
+      })).toThrow('support email');
+      expect(() => readEnvironment({
+        EXPO_PUBLIC_KIN_ENVIRONMENT: deployment,
+        EXPO_PUBLIC_KIN_PUBLIC_URL: 'https://kin.example',
+        EXPO_PUBLIC_KIN_SUPPORT_EMAIL: 'not-an-email',
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_example',
+        EXPO_PUBLIC_SUPABASE_URL: 'https://kin.supabase.co',
+      })).toThrow('support email');
+    },
+  );
 
   it.each(['preview', 'production'] as const)(
     'requires a public HTTPS app URL for %s',
@@ -75,6 +97,7 @@ describe('readEnvironment', () => {
     expect(readEnvironment({
       EXPO_PUBLIC_KIN_ENVIRONMENT: 'production',
       EXPO_PUBLIC_KIN_PUBLIC_URL: 'https://KIN.example/base///',
+      EXPO_PUBLIC_KIN_SUPPORT_EMAIL: 'support@kin-app.com',
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_example',
       EXPO_PUBLIC_SUPABASE_URL: 'https://kin.supabase.co',
     }).publicAppUrl).toBe('https://kin.example/base');
@@ -138,13 +161,19 @@ describe('readEnvironment', () => {
 describe('readPublicEnvironmentValues', () => {
   it('collects each Expo public value through an explicit property read', () => {
     const previous = process.env.EXPO_PUBLIC_KIN_PUBLIC_URL;
+    const previousSupport = process.env.EXPO_PUBLIC_KIN_SUPPORT_EMAIL;
     process.env.EXPO_PUBLIC_KIN_PUBLIC_URL = 'https://bundle.kin.example';
+    process.env.EXPO_PUBLIC_KIN_SUPPORT_EMAIL = 'support@bundle.kin.example';
     try {
       expect(readPublicEnvironmentValues().EXPO_PUBLIC_KIN_PUBLIC_URL)
         .toBe('https://bundle.kin.example');
+      expect(readPublicEnvironmentValues().EXPO_PUBLIC_KIN_SUPPORT_EMAIL)
+        .toBe('support@bundle.kin.example');
     } finally {
       if (previous === undefined) delete process.env.EXPO_PUBLIC_KIN_PUBLIC_URL;
       else process.env.EXPO_PUBLIC_KIN_PUBLIC_URL = previous;
+      if (previousSupport === undefined) delete process.env.EXPO_PUBLIC_KIN_SUPPORT_EMAIL;
+      else process.env.EXPO_PUBLIC_KIN_SUPPORT_EMAIL = previousSupport;
     }
   });
 });

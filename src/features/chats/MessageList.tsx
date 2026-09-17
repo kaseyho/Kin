@@ -10,6 +10,7 @@ interface MessageListProps {
   partnerName: string;
   rememberedMessageIds?: ReadonlySet<string>;
   onOpenActions: (messageId: string) => void;
+  onMessageRef?: (messageId: string, node: View | null) => void;
   onRetry: (messageId: string) => void;
 }
 
@@ -17,6 +18,7 @@ export function MessageList({
   currentUserId,
   messages,
   onOpenActions,
+  onMessageRef,
   onRetry,
   partnerName,
   rememberedMessageIds = new Set(),
@@ -32,6 +34,7 @@ export function MessageList({
           <View key={message.id}>
             {showDate ? <Text style={styles.date}>{formatDate(message.createdAt)}</Text> : null}
             <MessageBubble
+              bubbleRef={(node) => onMessageRef?.(message.id, node)}
               currentUserId={currentUserId}
               isRemembered={rememberedMessageIds.has(message.id)}
               message={message}

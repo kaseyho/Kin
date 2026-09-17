@@ -119,4 +119,33 @@ describe('ChatScreen', () => {
 
     await waitFor(() => expect(onRemember).toHaveBeenCalledWith('message-3'));
   });
+
+  it('reports a received message without exposing internal person identifiers', async () => {
+    const user = userEvent.setup();
+    const repository = await renderDemoChat();
+    const submit = jest.spyOn(repository, 'submitContentReport');
+
+    await user.longPress(screen.getByLabelText(
+      'Message from Jamie: I was trying to impress you. Actions available',
+    ));
+    await user.press(screen.getByRole('button', { name: 'Report this message' }));
+
+    expect(screen.getByRole('header', { name: 'Report this message' })).toBeTruthy();
+    expect(screen.queryByText('message-3')).toBeNull();
+    expect(screen.queryByText('jamie')).toBeNull();
+    expect(screen.getByText(/Demo reports are saved only on this device/i)).toBeTruthy();
+    expect(screen.getByText(/Support contact is not configured for this build/i)).toBeTruthy();
+    expect(screen.queryByRole('link')).toBeNull();
+
+    await user.press(screen.getByRole('radio', { name: 'Threats or violence' }));
+    await user.press(screen.getByRole('button', { name: 'Save demo report' }));
+
+    await waitFor(() => expect(submit).toHaveBeenCalledWith({
+      category: 'threats',
+      explanation: '',
+      messageId: 'message-3',
+      spaceId: 'space-maya-jamie',
+    }));
+    expect(await screen.findByRole('header', { name: 'Demo report saved' })).toBeTruthy();
+  });
 });

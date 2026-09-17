@@ -13,6 +13,7 @@ import {
 import { colors, radii, spacing } from '@/design/tokens';
 
 interface AccessibleSheetProps extends PropsWithChildren {
+  closeDisabled?: boolean;
   closeLabel: string;
   label: string;
   onClose: () => void;
@@ -23,6 +24,7 @@ interface AccessibleSheetProps extends PropsWithChildren {
 
 export function AccessibleSheet({
   children,
+  closeDisabled = false,
   closeLabel,
   label,
   onClose,
@@ -31,10 +33,16 @@ export function AccessibleSheet({
   visible,
 }: AccessibleSheetProps) {
   const sheetRef = useRef<View>(null);
-  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const closeDisabledRef = useRef(closeDisabled);
+  const onCloseRef = useRef(onClose);
+  const returnFocusRef = useRef<View | HTMLElement | null>(null);
+
+  closeDisabledRef.current = closeDisabled;
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!visible) return;
+    returnFocusRef.current = null;
     if (Platform.OS !== 'web') {
       const handle = findNodeHandle(sheetRef.current);
       if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
@@ -71,15 +79,19 @@ export function AccessibleSheet({
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  // requestClose intentionally closes over the current focus target and callback.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   function requestClose() {
-    onClose();
-    if (Platform.OS === 'web') {
-      requestAnimationFrame(() => returnFocusRef.current?.focus());
-    }
+    if (closeDisabledRef.current) return;
+    onCloseRef.current();
+    requestAnimationFrame(() => {
+      if (Platform.OS === 'web') {
+        (returnFocusRef.current as HTMLElement | null)?.focus?.();
+        return;
+      }
+      const handle = findNodeHandle(returnFocusRef.current as View | null);
+      if (handle) AccessibilityInfo.setAccessibilityFocus(handle);
+    });
   }
 
   if (!visible) return null;
@@ -92,6 +104,7 @@ export function AccessibleSheet({
       <Pressable
         accessibilityLabel={closeLabel}
         accessibilityRole="button"
+        disabled={closeDisabled}
         onPress={requestClose}
         style={styles.scrim}
       />

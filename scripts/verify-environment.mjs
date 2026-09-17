@@ -10,18 +10,21 @@ const demo = readExpoConfig({
 assertReleaseShape(demo);
 assert.equal(demo.extra?.kinEnvironment, 'demo');
 assert.equal(demo.extra?.kinPublicUrl, 'https://demo.kin.invalid');
+assert.equal(demo.extra?.kinSupportEmail, 'support@kin.invalid');
 assert.equal(demo.ios?.associatedDomains, undefined);
 assert.equal(demo.android?.intentFilters, undefined);
 
 const production = readExpoConfig({
   EXPO_PUBLIC_KIN_ENVIRONMENT: 'production',
   EXPO_PUBLIC_KIN_PUBLIC_URL: 'https://kin-fixture.example/app/',
+  EXPO_PUBLIC_KIN_SUPPORT_EMAIL: 'support@kin-fixture.com',
   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_fixture',
   EXPO_PUBLIC_SUPABASE_URL: 'https://kin-fixture.supabase.co',
 });
 assertReleaseShape(production);
 assert.equal(production.extra?.kinEnvironment, 'production');
 assert.equal(production.extra?.kinPublicUrl, 'https://kin-fixture.example/app');
+assert.equal(production.extra?.kinSupportEmail, 'support@kin-fixture.com');
 assert.deepEqual(production.ios?.associatedDomains, ['applinks:kin-fixture.example']);
 assert.deepEqual(production.android?.intentFilters?.[0]?.data, [{
   host: 'kin-fixture.example',
@@ -32,9 +35,17 @@ assert.deepEqual(production.android?.intentFilters?.[0]?.data, [{
 assertExpoConfigFails({
   EXPO_PUBLIC_KIN_ENVIRONMENT: 'production',
   EXPO_PUBLIC_KIN_PUBLIC_URL: 'https://localhost:8081',
+  EXPO_PUBLIC_KIN_SUPPORT_EMAIL: 'support@kin-fixture.com',
   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_fixture',
   EXPO_PUBLIC_SUPABASE_URL: 'https://kin-fixture.supabase.co',
-});
+}, /public HTTPS app URL/, 'Expo config accepted a production loopback public URL.');
+
+assertExpoConfigFails({
+  EXPO_PUBLIC_KIN_ENVIRONMENT: 'production',
+  EXPO_PUBLIC_KIN_PUBLIC_URL: 'https://kin-fixture.example',
+  EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_fixture',
+  EXPO_PUBLIC_SUPABASE_URL: 'https://kin-fixture.supabase.co',
+}, /support email/, 'Expo config accepted production without a support email.');
 
 process.stdout.write('Expo environment configuration is valid for demo and production.\n');
 
@@ -53,10 +64,10 @@ function readExpoConfig(overrides) {
   }
 }
 
-function assertExpoConfigFails(overrides) {
+function assertExpoConfigFails(overrides, pattern, message) {
   const result = runExpoConfig(overrides);
-  assert.notEqual(result.status, 0, 'Expo config accepted a production loopback public URL.');
-  assert.match(result.stderr, /public HTTPS app URL/);
+  assert.notEqual(result.status, 0, message);
+  assert.match(result.stderr, pattern);
 }
 
 function runExpoConfig(overrides) {
@@ -70,6 +81,7 @@ function runExpoConfig(overrides) {
         ...process.env,
         EXPO_PUBLIC_KIN_ENVIRONMENT: '',
         EXPO_PUBLIC_KIN_PUBLIC_URL: '',
+        EXPO_PUBLIC_KIN_SUPPORT_EMAIL: '',
         EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: '',
         EXPO_PUBLIC_SUPABASE_URL: '',
         ...overrides,

@@ -49,7 +49,7 @@ test('opens message actions from the keyboard and returns focus on close', async
   await expect(dialog).toBeVisible();
   await expect(dialog).toBeFocused();
   await page.keyboard.press('Shift+Tab');
-  await expect(page.getByRole('button', { name: 'Remember this' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Report this message' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'React with heart' })).toBeFocused();
   await page.keyboard.press('Escape');

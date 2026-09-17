@@ -1,6 +1,7 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 type BuildDeployment = 'demo' | 'development' | 'preview' | 'production';
+const DEFAULT_SUPPORT_EMAIL = 'support@kin.invalid';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const environment = readBuildEnvironment();
@@ -65,21 +66,36 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...config.extra,
       kinEnvironment: environment.deployment,
       kinPublicUrl: environment.publicAppUrl,
+      kinSupportEmail: environment.supportEmail,
     },
   };
 };
 
-function readBuildEnvironment(): { deployment: BuildDeployment; publicAppUrl: string } {
+function readBuildEnvironment(): {
+  deployment: BuildDeployment;
+  publicAppUrl: string;
+  supportEmail: string;
+} {
   const deployment = process.env.EXPO_PUBLIC_KIN_ENVIRONMENT?.trim();
   if (!isBuildDeployment(deployment)) {
     throw new Error('Set EXPO_PUBLIC_KIN_ENVIRONMENT before evaluating the Expo config.');
   }
+  const rawSupportEmail = process.env.EXPO_PUBLIC_KIN_SUPPORT_EMAIL?.trim();
+  const configuredSupportEmail = normalizeSupportEmail(rawSupportEmail);
+  if (rawSupportEmail && !configuredSupportEmail) {
+    throw new Error('Kin requires a valid public support email.');
+  }
   if (deployment === 'demo') {
-    return { deployment, publicAppUrl: 'https://demo.kin.invalid' };
+    return {
+      deployment,
+      publicAppUrl: 'https://demo.kin.invalid',
+      supportEmail: configuredSupportEmail ?? DEFAULT_SUPPORT_EMAIL,
+    };
   }
 
   const configuredUrl = process.env.EXPO_PUBLIC_KIN_PUBLIC_URL?.trim()
     || (deployment === 'development' ? 'http://localhost:8081' : '');
+  let publicAppUrl: string;
   try {
     const url = new URL(configuredUrl);
     const isLoopback = isLoopbackHostname(url.hostname);
@@ -97,10 +113,33 @@ function readBuildEnvironment(): { deployment: BuildDeployment; publicAppUrl: st
       throw new Error('invalid public URL');
     }
     url.pathname = url.pathname.replace(/\/+$/, '') || '/';
-    return { deployment, publicAppUrl: url.toString().replace(/\/$/, '') };
+    publicAppUrl = url.toString().replace(/\/$/, '');
   } catch {
     throw new Error('Kin requires a public HTTPS app URL outside local development.');
   }
+  if (!configuredSupportEmail && deployment !== 'development') {
+    throw new Error('Kin requires a valid public support email for preview and production.');
+  }
+  return {
+    deployment,
+    publicAppUrl,
+    supportEmail: configuredSupportEmail ?? DEFAULT_SUPPORT_EMAIL,
+  };
+}
+
+function normalizeSupportEmail(value: string | undefined): string | null {
+  const normalized = value?.trim().toLowerCase() ?? '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) return null;
+  const domain = normalized.split('@')[1];
+  if (
+    domain === 'localhost'
+    || domain.endsWith('.localhost')
+    || domain.endsWith('.invalid')
+    || domain.endsWith('.example')
+  ) {
+    return null;
+  }
+  return normalized;
 }
 
 function isBuildDeployment(value: string | undefined): value is BuildDeployment {

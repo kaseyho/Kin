@@ -1,11 +1,14 @@
+import { DEFAULT_KIN_SUPPORT_EMAIL, normalizeSupportEmail } from './support';
+
 export type KinDeployment = 'demo' | 'development' | 'preview' | 'production';
 
 export type KinEnvironment =
-  | { deployment: 'demo'; mode: 'demo'; publicAppUrl: string }
+  | { deployment: 'demo'; mode: 'demo'; publicAppUrl: string; supportEmail: string }
   | {
       deployment: Exclude<KinDeployment, 'demo'>;
       mode: 'connected';
       publicAppUrl: string;
+      supportEmail: string;
       supabaseUrl: string;
       supabasePublishableKey: string;
     };
@@ -25,6 +28,7 @@ export function readPublicEnvironmentValues(): EnvironmentValues {
   return {
     EXPO_PUBLIC_KIN_ENVIRONMENT: process.env.EXPO_PUBLIC_KIN_ENVIRONMENT,
     EXPO_PUBLIC_KIN_PUBLIC_URL: process.env.EXPO_PUBLIC_KIN_PUBLIC_URL,
+    EXPO_PUBLIC_KIN_SUPPORT_EMAIL: process.env.EXPO_PUBLIC_KIN_SUPPORT_EMAIL,
     EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY:
       process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
     EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
@@ -44,8 +48,18 @@ export function readEnvironment(
       'Set EXPO_PUBLIC_KIN_ENVIRONMENT to demo, development, preview, or production.',
     );
   }
+  const rawSupportEmail = values.EXPO_PUBLIC_KIN_SUPPORT_EMAIL?.trim();
+  const configuredSupportEmail = normalizeSupportEmail(rawSupportEmail);
+  if (rawSupportEmail && !configuredSupportEmail) {
+    throw new ConfigurationError('Kin requires a valid public support email.');
+  }
   if (deployment === 'demo') {
-    return { deployment, mode: 'demo', publicAppUrl: 'https://demo.kin.invalid' };
+    return {
+      deployment,
+      mode: 'demo',
+      publicAppUrl: 'https://demo.kin.invalid',
+      supportEmail: configuredSupportEmail ?? DEFAULT_KIN_SUPPORT_EMAIL,
+    };
   }
 
   const supabaseUrl = values.EXPO_PUBLIC_SUPABASE_URL?.trim();
@@ -68,10 +82,14 @@ export function readEnvironment(
       || (deployment === 'development' ? 'http://localhost:8081' : ''),
     deployment,
   );
+  if (!configuredSupportEmail && deployment !== 'development') {
+    throw new ConfigurationError('Kin requires a valid public support email for preview and production.');
+  }
   return {
     deployment,
     mode: 'connected',
     publicAppUrl,
+    supportEmail: configuredSupportEmail ?? DEFAULT_KIN_SUPPORT_EMAIL,
     supabasePublishableKey,
     supabaseUrl,
   };

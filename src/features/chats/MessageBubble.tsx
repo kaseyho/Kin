@@ -6,6 +6,7 @@ import { colors, radii, spacing, typography } from '@/design/tokens';
 import type { Message } from '@/domain/models';
 
 interface MessageBubbleProps {
+  bubbleRef?: (node: View | null) => void;
   currentUserId: string;
   message: Message;
   senderName: string;
@@ -15,6 +16,7 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({
+  bubbleRef,
   currentUserId,
   isRemembered = false,
   message,
@@ -51,6 +53,7 @@ export function MessageBubble({
         }}
         onLongPress={onOpenActions}
         onPress={Platform.OS === 'web' ? onOpenActions : undefined}
+        ref={bubbleRef}
         style={({ pressed }) => [
           styles.bubble,
           mine ? styles.mineBubble : styles.theirBubble,

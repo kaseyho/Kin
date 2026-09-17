@@ -4,16 +4,20 @@ import { AccessibleSheet } from '@/components/AccessibleSheet';
 import { colors, radii, spacing } from '@/design/tokens';
 
 interface MessageActionSheetProps {
+  reportIsDemo?: boolean;
   visible: boolean;
   onClose: () => void;
   onReact: (emoji: string) => void;
   onRemember: () => void;
+  onReport?: () => void;
 }
 
 export function MessageActionSheet({
   onClose,
   onReact,
   onRemember,
+  onReport,
+  reportIsDemo = false,
   visible,
 }: MessageActionSheetProps) {
   return (
@@ -41,6 +45,21 @@ export function MessageActionSheet({
           </View>
           <Text style={styles.arrow}>↗</Text>
         </Pressable>
+        {onReport ? (
+          <Pressable
+            accessibilityLabel="Report this message"
+            accessibilityRole="button"
+            onPress={onReport}
+            style={styles.report}
+          >
+            <Text style={styles.reportTitle}>Report this message</Text>
+            <Text style={styles.reportCopy}>
+              {reportIsDemo
+                ? 'Preview the report flow. Demo reports stay on this device.'
+                : 'Send it privately to Kin for safety review.'}
+            </Text>
+          </Pressable>
+        ) : null}
     </AccessibleSheet>
   );
 }
@@ -72,6 +91,9 @@ const styles = StyleSheet.create({
   },
   reactionEmoji: { fontSize: 22 },
   reactionRow: { flexDirection: 'row', gap: spacing.md, marginVertical: spacing.lg },
+  report: { borderTopColor: colors.keyline, borderTopWidth: 1, marginTop: spacing.lg, minHeight: 62, paddingTop: spacing.lg },
+  reportCopy: { color: colors.mutedInk, fontSize: 12, marginTop: 3 },
+  reportTitle: { color: colors.danger, fontSize: 14, fontWeight: '800' },
   remember: {
     alignItems: 'center',
     borderColor: colors.keyline,

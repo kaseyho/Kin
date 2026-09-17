@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { SupportLink } from '@/components/SupportLink';
+import { readPublicSupportEmail } from '@/config/support';
 import { colors, radii, spacing, typography } from '@/design/tokens';
 import { usePremiumGate } from '@/features/premium/usePremiumGate';
 import { useAuth } from '@/state/useAuth';
@@ -19,11 +21,29 @@ export function ProfileScreen({ onOpenKinPlus, onSignedOut }: ProfileScreenProps
   const kin = useKin();
   const premium = usePremiumGate();
   const [editing, setEditing] = useState(false);
+  const [restoringSpaceId, setRestoringSpaceId] = useState<string | null>(null);
+  const [restoreFailure, setRestoreFailure] = useState<{ message: string; spaceId: string } | null>(null);
   const snapshot = kin.snapshot;
   const userId = snapshot?.currentUserId;
   const profile = snapshot?.profiles.find((item) => item.id === userId);
   const archived = snapshot?.spaces.filter((space) => userId && space.archivedByUserIds.includes(userId)) ?? [];
   const accountEmail = auth.state.status === 'signed-in' ? auth.state.user.email : undefined;
+
+  async function restoreSpace(spaceId: string) {
+    if (!userId || restoringSpaceId) return;
+    setRestoringSpaceId(spaceId);
+    setRestoreFailure(null);
+    try {
+      await kin.archiveSpace(spaceId, userId, false);
+    } catch (reason) {
+      setRestoreFailure({
+        message: reason instanceof Error ? reason.message : 'Kin could not restore this Space.',
+        spaceId,
+      });
+    } finally {
+      setRestoringSpaceId(null);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -68,17 +88,38 @@ export function ProfileScreen({ onOpenKinPlus, onSignedOut }: ProfileScreenProps
             const name = userId ? space.preferencesByUser[userId]?.nickname || person?.displayName || 'Your person' : 'Your person';
             return (
               <Pressable
-                accessibilityLabel={`Restore Kin Space with ${name}`}
+                accessibilityLabel={restoreFailure?.spaceId === space.id
+                  ? `Try restoring Kin Space with ${name}`
+                  : `Restore Kin Space with ${name}`}
                 accessibilityRole="button"
+                disabled={restoringSpaceId !== null}
                 key={space.id}
-                onPress={() => userId ? kin.archiveSpace(space.id, userId, false) : undefined}
-                style={styles.restore}
+                onPress={() => void restoreSpace(space.id)}
+                style={[styles.restore, restoringSpaceId !== null && styles.disabled]}
               >
                 <Text style={styles.restoreName}>{name}</Text>
-                <Text style={styles.restoreAction}>Restore</Text>
+                <Text style={styles.restoreAction}>
+                  {restoringSpaceId === space.id
+                    ? 'Restoring…'
+                    : restoreFailure?.spaceId === space.id ? 'Try again' : 'Restore'}
+                </Text>
               </Pressable>
             );
           })}
+          {restoreFailure ? (
+            <Text accessibilityRole="alert" style={styles.error}>{restoreFailure.message}</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>SAFETY & SUPPORT</Text>
+          <Text style={styles.sectionTitle}>Need help?</Text>
+          <Text style={styles.copy}>
+            {kin.mode === 'demo'
+              ? 'Production builds provide a verified contact for account, privacy, and safety support.'
+              : 'Contact Kin for account, privacy, or safety support.'}
+          </Text>
+          <SupportLink supportEmail={readPublicSupportEmail()} />
         </View>
 
         <AccountActions
@@ -110,8 +151,10 @@ export function ProfileScreen({ onOpenKinPlus, onSignedOut }: ProfileScreenProps
 const styles = StyleSheet.create({
   content: { padding: spacing.xl, paddingBottom: 100 },
   copy: { color: colors.mutedInk, fontFamily: typography.body, fontSize: 14, lineHeight: 21, marginTop: spacing.sm },
+  disabled: { opacity: 0.5 },
   editButton: { alignItems: 'center', justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.sm },
   editButtonLabel: { color: colors.rose, fontFamily: typography.bodyStrong, fontSize: 13 },
+  error: { color: colors.danger, fontSize: 13, lineHeight: 19, marginTop: spacing.md },
   identityRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   label: { color: colors.rose, fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
   name: { color: colors.mutedInk, fontSize: 15, marginTop: spacing.xs },
