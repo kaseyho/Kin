@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { colors, spacing } from '@/design/tokens';
 import type { Message } from '@/domain/models';
@@ -12,6 +12,11 @@ interface MessageListProps {
   onOpenActions: (messageId: string) => void;
   onMessageRef?: (messageId: string, node: View | null) => void;
   onRetry: (messageId: string) => void;
+  onRemove: (messageId: string) => void;
+  hasOlderMessages?: boolean;
+  historyStatus?: 'idle' | 'loading' | 'error';
+  onLoadOlder?: () => void;
+  showBeginning?: boolean;
 }
 
 export function MessageList({
@@ -19,13 +24,44 @@ export function MessageList({
   messages,
   onOpenActions,
   onMessageRef,
+  onRemove,
   onRetry,
+  hasOlderMessages = false,
+  historyStatus = 'idle',
+  onLoadOlder,
   partnerName,
   rememberedMessageIds = new Set(),
+  showBeginning = false,
 }: MessageListProps) {
   const ordered = [...messages].sort((left, right) => left.createdAt.localeCompare(right.createdAt));
   return (
-    <ScrollView contentContainerStyle={styles.content} style={styles.list}>
+    <ScrollView
+      contentContainerStyle={styles.content}
+      maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+      style={styles.list}
+    >
+      {hasOlderMessages || historyStatus !== 'idle' ? (
+        <View style={styles.historyControl}>
+          {historyStatus === 'loading' ? (
+            <Text accessibilityLiveRegion="polite" style={styles.historyText}>Loading earlier messages…</Text>
+          ) : (
+            <Pressable
+              accessibilityLabel={historyStatus === 'error' ? 'Retry loading earlier messages' : 'Load earlier messages'}
+              accessibilityRole="button"
+              onPress={onLoadOlder}
+              style={styles.historyButton}
+            >
+              <Text style={styles.historyButtonText}>
+                {historyStatus === 'error' ? 'Couldn’t load earlier messages. Retry' : 'Load earlier messages'}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      ) : showBeginning ? (
+        <Text accessibilityLabel="Beginning of conversation" style={styles.historyText}>
+          Beginning of conversation
+        </Text>
+      ) : null}
       {ordered.map((message, index) => {
         const calendarDate = message.createdAt.slice(0, 10);
         const previousDate = ordered[index - 1]?.createdAt.slice(0, 10);
@@ -39,6 +75,7 @@ export function MessageList({
               isRemembered={rememberedMessageIds.has(message.id)}
               message={message}
               onOpenActions={() => onOpenActions(message.id)}
+              onRemove={() => onRemove(message.id)}
               onRetry={() => onRetry(message.id)}
               senderName={partnerName}
             />
@@ -67,5 +104,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textTransform: 'uppercase',
   },
+  historyButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md },
+  historyButtonText: { color: colors.rose, fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  historyControl: { alignItems: 'center', marginBottom: spacing.sm, minHeight: 44 },
+  historyText: { color: colors.mutedInk, fontSize: 13, paddingVertical: spacing.md },
   list: { flex: 1 },
 });

@@ -19,6 +19,7 @@ import { KinProvider } from '@/state/KinProvider';
 import { AuthProvider } from '@/state/AuthProvider';
 import { useAuth } from '@/state/useAuth';
 import { PremiumProvider } from '@/features/premium/PremiumProvider';
+import { ConnectivityProvider } from '@/state/ConnectivityProvider';
 
 const runtime = createAppRuntime(AsyncStorage);
 
@@ -68,33 +69,35 @@ function AuthenticatedApp({
 
   return (
     <PremiumProvider service={readyRuntime.premiumService}>
-      <KinProvider key={kinSessionKey} active={kinActive} repository={readyRuntime.repository}>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            animation: reducedMotion ? 'none' : 'fade',
-            contentStyle: { backgroundColor: colors.parchment },
-            headerShown: false,
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="invite/[code]" />
-          <Stack.Protected guard={authAvailable}>
-            <Stack.Screen name="auth" />
-          </Stack.Protected>
-          <Stack.Protected guard={productAvailable}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="onboarding" />
-            <Stack.Screen name="kin-plus" />
-            <Stack.Screen name="moment/[momentId]" />
-            <Stack.Screen name="space/new" />
-            <Stack.Screen name="space/[spaceId]" />
-            <Stack.Screen name="space/[spaceId]/invitation" />
-            <Stack.Screen name="space/[spaceId]/relationship" />
-            <Stack.Screen name="space/[spaceId]/timeline" />
-          </Stack.Protected>
-        </Stack>
-      </KinProvider>
+      <ConnectivityProvider>
+        <KinProvider key={kinSessionKey} active={kinActive} repository={readyRuntime.repository}>
+          <StatusBar style="dark" />
+          <Stack
+            screenOptions={{
+              animation: reducedMotion ? 'none' : 'fade',
+              contentStyle: { backgroundColor: colors.parchment },
+              headerShown: false,
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="invite/[code]" />
+            <Stack.Protected guard={authAvailable}>
+              <Stack.Screen name="auth" />
+            </Stack.Protected>
+            <Stack.Protected guard={productAvailable}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="onboarding" />
+              <Stack.Screen name="kin-plus" />
+              <Stack.Screen name="moment/[momentId]" />
+              <Stack.Screen name="space/new" />
+              <Stack.Screen name="space/[spaceId]" />
+              <Stack.Screen name="space/[spaceId]/invitation" />
+              <Stack.Screen name="space/[spaceId]/relationship" />
+              <Stack.Screen name="space/[spaceId]/timeline" />
+            </Stack.Protected>
+          </Stack>
+        </KinProvider>
+      </ConnectivityProvider>
     </PremiumProvider>
   );
 }

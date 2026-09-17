@@ -500,6 +500,10 @@ class DemoKinRepository implements KinRepository {
     const snapshot = await this.current();
     const currentProfile = this.requireCurrentProfile(snapshot);
     this.requireMembership(snapshot, spaceId, currentProfile.id);
+    await this.commit({
+      ...snapshot,
+      unreadCounts: { ...snapshot.unreadCounts, [spaceId]: 0 },
+    });
   }
 
   async addReaction(input: AddReactionInput): Promise<Message> {
@@ -661,6 +665,10 @@ class DemoKinRepository implements KinRepository {
     };
     const next = clone(snapshot);
     next.messages.push(reply);
+    next.unreadCounts = {
+      ...next.unreadCounts,
+      [sent.spaceId]: (next.unreadCounts[sent.spaceId] ?? 0) + 1,
+    };
     await this.commit(next);
   }
 
@@ -829,7 +837,9 @@ function refreshDemoInvitationStatuses(snapshot: KinSnapshot, now: string): KinS
 
 function normalizeDemoMessagePages(snapshot: KinSnapshot): KinSnapshot {
   const existingPages = snapshot.messagePages ?? {};
+  const existingUnreadCounts = snapshot.unreadCounts ?? {};
   const messagePages: KinSnapshot['messagePages'] = {};
+  const unreadCounts: KinSnapshot['unreadCounts'] = {};
   for (const space of snapshot.spaces) {
     const messages = snapshot.messages
       .filter((message) => message.spaceId === space.id)
@@ -843,8 +853,9 @@ function normalizeDemoMessagePages(snapshot: KinSnapshot): KinSnapshot {
         oldestMessageId: oldest.id,
       } : {}),
     };
+    unreadCounts[space.id] = Math.max(0, existingUnreadCounts[space.id] ?? 0);
   }
-  return { ...snapshot, messagePages };
+  return { ...snapshot, messagePages, unreadCounts };
 }
 
 function isBlockedPair(
@@ -873,6 +884,9 @@ function removeSpaces(snapshot: KinSnapshot, spaceIds: ReadonlySet<Id>): KinSnap
   next.messages = next.messages.filter((message) => !spaceIds.has(message.spaceId));
   next.messagePages = Object.fromEntries(
     Object.entries(next.messagePages).filter(([spaceId]) => !spaceIds.has(spaceId)),
+  );
+  next.unreadCounts = Object.fromEntries(
+    Object.entries(next.unreadCounts).filter(([spaceId]) => !spaceIds.has(spaceId)),
   );
   next.memories = next.memories.filter((memory) => !spaceIds.has(memory.spaceId));
   return next;

@@ -59,8 +59,8 @@ describe('non-happy product states', () => {
 
     await user.type(screen.getByLabelText('Message Jamie'), 'Save me a seat');
     await user.press(screen.getByRole('button', { name: 'Send' }));
-    await user.press(await screen.findByRole('button', { name: 'Not sent. Tap to retry' }));
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Not sent. Tap to retry' })).toBeNull());
+    await user.press(await screen.findByRole('button', { name: 'Retry message' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Retry message' })).toBeNull());
     expect(screen.getAllByText('Save me a seat')).toHaveLength(1);
   });
 

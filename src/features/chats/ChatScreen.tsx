@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
+  AppState,
   findNodeHandle,
   Image,
   KeyboardAvoidingView,
@@ -25,7 +26,9 @@ import { ReportSheet } from '@/features/safety/ReportSheet';
 import type { MediaPicker } from '@/services/media/contracts';
 import { MediaPermissionError } from '@/services/media/contracts';
 import { useKin } from '@/state/useKin';
+import { useConnectivity } from '@/state/useConnectivity';
 import { Composer } from './Composer';
+import { ConversationStatusBanner } from './ConversationStatusBanner';
 import { MessageActionSheet } from './MessageActionSheet';
 import { MessageList } from './MessageList';
 import { StickerPicker } from './StickerPicker';
@@ -46,6 +49,8 @@ export function ChatScreen({
   spaceId,
 }: ChatScreenProps) {
   const kin = useKin();
+  const { markSpaceRead } = kin;
+  const connectivity = useConnectivity();
   const [text, setText] = useState('');
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [showStickers, setShowStickers] = useState(false);
@@ -54,12 +59,31 @@ export function ChatScreen({
   const [reportMessageId, setReportMessageId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [noticeAction, setNoticeAction] = useState<null | { label: string; onPress: () => void }>(null);
+  const [historyStatus, setHistoryStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const messageRefs = useRef(new Map<string, View>());
+  const loadingHistory = useRef(false);
 
-  if (kin.status === 'loading') return <ScreenState message="Opening your conversation…" title="Jamie" />;
   const snapshot = kin.snapshot;
   const currentUserId = snapshot?.currentUserId;
   const space = snapshot?.spaces.find((item) => item.id === spaceId);
+  const spaceAvailable = Boolean(space);
+  const latestPartnerMessageId = snapshot?.messages
+    .filter((message) => message.spaceId === spaceId && message.senderId !== currentUserId)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0]?.id;
+
+  useEffect(() => {
+    if (!currentUserId || !spaceAvailable) return;
+    const markRead = () => {
+      void markSpaceRead(spaceId).catch(() => undefined);
+    };
+    markRead();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') markRead();
+    });
+    return () => subscription.remove();
+  }, [currentUserId, latestPartnerMessageId, markSpaceRead, spaceAvailable, spaceId]);
+
+  if (kin.status === 'loading') return <ScreenState message="Opening your conversation…" title="Jamie" />;
   if (!snapshot || !currentUserId || !space) {
     return <ScreenState message="This relationship may have been archived or removed." title="Kin Space not found" />;
   }
@@ -75,6 +99,21 @@ export function ChatScreen({
   const messages = snapshot.messages.filter((message) => message.spaceId === spaceId);
   const selectedMessage = messages.find((message) => message.id === selectedMessageId);
   const wallpaperSource = kinWallpaperSource(space.preferencesByUser[currentUserId]?.wallpaperId);
+  const messagePage = snapshot.messagePages[spaceId];
+
+  async function loadEarlierMessages() {
+    if (loadingHistory.current) return;
+    loadingHistory.current = true;
+    setHistoryStatus('loading');
+    try {
+      await kin.loadOlderMessages(spaceId);
+      setHistoryStatus('idle');
+    } catch {
+      setHistoryStatus('error');
+    } finally {
+      loadingHistory.current = false;
+    }
+  }
 
   async function sendText() {
     const body = text.trim();
@@ -189,18 +228,24 @@ export function ChatScreen({
           <Text style={[styles.relationshipGlyph, { color: theme.accent }]}>⌁</Text>
         </Pressable>
       </View>
+      <ConversationStatusBanner phase={connectivity.phase} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.body}>
         <MessageList
           currentUserId={currentUserId}
+          hasOlderMessages={messagePage?.hasOlderMessages}
+          historyStatus={historyStatus}
           messages={messages}
+          onLoadOlder={() => void loadEarlierMessages()}
           onOpenActions={setSelectedMessageId}
           onMessageRef={(messageId, node) => {
             if (node) messageRefs.current.set(messageId, node);
             else messageRefs.current.delete(messageId);
           }}
+          onRemove={(messageId) => void kin.removeFailedMessage(messageId)}
           onRetry={(messageId) => void kin.retryMessage(messageId)}
           partnerName={partnerName}
           rememberedMessageIds={new Set(snapshot.memories.flatMap((memory) => memory.sourceMessageIds))}
+          showBeginning={!messagePage?.hasOlderMessages && (messagePage?.loadedCount ?? 0) > 50}
         />
         {notice ? (
           <View style={styles.noticeWrap}>

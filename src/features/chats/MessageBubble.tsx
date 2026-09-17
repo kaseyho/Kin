@@ -13,6 +13,7 @@ interface MessageBubbleProps {
   isRemembered?: boolean;
   onOpenActions: () => void;
   onRetry: () => void;
+  onRemove: () => void;
 }
 
 export function MessageBubble({
@@ -21,6 +22,7 @@ export function MessageBubble({
   isRemembered = false,
   message,
   onOpenActions,
+  onRemove,
   onRetry,
   senderName,
 }: MessageBubbleProps) {
@@ -101,14 +103,25 @@ export function MessageBubble({
         </View>
       ) : null}
       {mine && message.deliveryState === 'failed' ? (
-        <Pressable
-          accessibilityLabel="Not sent. Tap to retry"
-          accessibilityRole="button"
-          onPress={onRetry}
-          style={styles.retry}
-        >
-          <Text style={styles.retryText}>Not sent. Tap to retry</Text>
-        </Pressable>
+        <View accessibilityLabel="Message not sent" style={styles.failedRow}>
+          <Text style={styles.retryText}>Not sent</Text>
+          <Pressable
+            accessibilityLabel="Retry message"
+            accessibilityRole="button"
+            onPress={onRetry}
+            style={styles.failedAction}
+          >
+            <Text style={styles.retryText}>Retry</Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Remove failed message"
+            accessibilityRole="button"
+            onPress={onRemove}
+            style={styles.failedAction}
+          >
+            <Text style={styles.removeText}>Remove</Text>
+          </Pressable>
+        </View>
       ) : null}
     </View>
   );
@@ -151,7 +164,9 @@ const styles = StyleSheet.create({
   },
   reactionsMine: { marginRight: spacing.sm },
   reactionsTheirs: { marginLeft: spacing.sm },
-  retry: { minHeight: 44, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  failedAction: { justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.sm },
+  failedRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, minHeight: 44 },
+  removeText: { color: colors.mutedInk, fontSize: 12, fontWeight: '700' },
   retryText: { color: colors.danger, fontSize: 12, fontWeight: '700' },
   row: { marginVertical: 4, width: '100%' },
   stickerImage: { height: 156, width: 156 },

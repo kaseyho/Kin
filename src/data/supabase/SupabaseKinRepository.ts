@@ -84,6 +84,7 @@ class SupabaseKinRepository implements KinRepository {
         memories: [],
         messages: [],
         messagePages: {},
+        unreadCounts: {},
         profiles: ownProfileRows.map(mapProfile),
         schemaVersion: 1,
         spaces: [],
@@ -104,24 +105,31 @@ class SupabaseKinRepository implements KinRepository {
       assertResult(result.error, 'load_failed', 'Kin could not finish loading this relationship.', 'reconnect');
     }
 
-    const messagePageResults = await Promise.all(spaceIds.map(async (spaceId) => ({
-      result: await this.client.rpc('list_space_messages', {
-        before_created_at: null,
-        before_message_id: null,
-        page_size: 51,
-        target_space_id: spaceId,
-      }),
-      spaceId,
-    })));
+    const [messagePageResults, unreadResult] = await Promise.all([
+      Promise.all(spaceIds.map(async (spaceId) => ({
+        result: await this.client.rpc('list_space_messages', {
+          before_created_at: null,
+          before_message_id: null,
+          page_size: 51,
+          target_space_id: spaceId,
+        }),
+        spaceId,
+      }))),
+      this.client.rpc('get_my_unread_counts', {}),
+    ]);
     for (const { result } of messagePageResults) {
       assertResult(result.error, 'load_failed', 'Kin could not load recent messages.', 'reconnect');
     }
+    assertResult(unreadResult.error, 'load_failed', 'Kin could not load unread messages.', 'reconnect');
 
     const spaces = (spacesResult.data ?? []) as SpaceRow[];
     const members = (membersResult.data ?? []) as MemberRow[];
     const themes = (themesResult.data ?? []) as ThemeRow[];
     const newestRowsBySpace = new Map<Id, MessageRow[]>();
     const freshMessagePages: Record<Id, MessagePageState> = {};
+    const unreadCounts = Object.fromEntries(
+      (unreadResult.data ?? []).map((row) => [row.space_id, Number(row.unread_count)]),
+    );
     for (const { result, spaceId } of messagePageResults) {
       const probedRows = (result.data ?? []) as MessageRow[];
       const visibleRows = probedRows.slice(0, 50);
@@ -197,6 +205,7 @@ class SupabaseKinRepository implements KinRepository {
       profiles: profiles.map(mapProfile),
       schemaVersion: 1,
       spaces: spaces.map((row) => mapSpace(row, members, themes, invites)),
+      unreadCounts,
     };
     this.ensureRealtime();
     return clone(this.snapshot);
@@ -530,6 +539,13 @@ class SupabaseKinRepository implements KinRepository {
     const result = await this.client.rpc('mark_space_read', { target_space_id: spaceId });
     if (result.error) {
       throw mapLifecycleError(result.error, 'save_failed', 'Kin could not mark that Space read.', 'retry');
+    }
+    if (this.snapshot) {
+      this.snapshot = {
+        ...this.snapshot,
+        unreadCounts: { ...this.snapshot.unreadCounts, [spaceId]: 0 },
+      };
+      this.emit(this.snapshot);
     }
   }
 

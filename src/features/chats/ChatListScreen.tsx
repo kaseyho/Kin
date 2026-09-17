@@ -36,7 +36,11 @@ export function ChatListScreen({ onNewSpace, onOpenSpace }: ChatListScreenProps)
     (space) =>
       !space.archivedByUserIds.includes(userId) &&
       kin.snapshot?.members.some((member) => member.spaceId === space.id && member.userId === userId),
-  );
+  ).sort((left, right) => {
+    const leftLatest = latestActivityAt(kin.snapshot!, left);
+    const rightLatest = latestActivityAt(kin.snapshot!, right);
+    return rightLatest.localeCompare(leftLatest);
+  });
 
   if (spaces.length === 0) {
     return (
@@ -70,6 +74,7 @@ export function ChatListScreen({ onNewSpace, onOpenSpace }: ChatListScreenProps)
               onPress={() => onOpenSpace(space.id)}
               profile={relationship.profile}
               space={space}
+              unreadCount={kin.snapshot!.unreadCounts[space.id] ?? 0}
             />
           );
         })}
@@ -104,17 +109,20 @@ function ChatRow({
   onPress,
   profile,
   space,
+  unreadCount,
 }: {
   latestMessage?: Message;
   name: string;
   onPress: () => void;
   profile?: UserProfile;
   space: KinSpace;
+  unreadCount: number;
 }) {
   const preference = Object.values(space.preferencesByUser).find((item) => item.nickname === name);
   const theme = relationshipThemes.find((item) => item.id === preference?.themeId) ?? relationshipThemes[0];
   return (
     <Pressable
+      accessibilityHint={unreadCount > 0 ? formatUnreadLabel(unreadCount) : undefined}
       accessibilityLabel={`Open Kin Space with ${name}`}
       accessibilityRole="button"
       onPress={onPress}
@@ -128,6 +136,11 @@ function ChatRow({
         </View>
         <Text numberOfLines={1} style={styles.preview}>{latestMessage?.body || 'Your Space is ready.'}</Text>
       </View>
+      {unreadCount > 0 ? (
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.unreadBadge}>
+          <Text style={styles.unreadText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+        </View>
+      ) : null}
       <View style={[styles.accentLine, { backgroundColor: theme.accent }]} />
     </Pressable>
   );
@@ -149,6 +162,19 @@ function formatTime(value: string): string {
   return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(
     new Date(value),
   );
+}
+
+function latestActivityAt(
+  snapshot: NonNullable<ReturnType<typeof useKin>['snapshot']>,
+  space: KinSpace,
+): string {
+  return snapshot.messages
+    .filter((message) => message.spaceId === space.id)
+    .reduce((latest, message) => message.createdAt > latest ? message.createdAt : latest, space.createdAt);
+}
+
+function formatUnreadLabel(count: number): string {
+  return count > 99 ? '99 or more unread messages' : `${count} unread ${count === 1 ? 'message' : 'messages'}`;
 }
 
 const styles = StyleSheet.create({
@@ -196,5 +222,15 @@ const styles = StyleSheet.create({
   sectionLabel: { color: colors.rose, fontSize: 11, fontWeight: '800', letterSpacing: 1.25 },
   time: { color: colors.mutedInk, fontSize: 11 },
   title: { color: colors.plumInk, fontFamily: typography.display, fontSize: 38, fontWeight: '800', letterSpacing: -1.2 },
+  unreadBadge: {
+    alignItems: 'center',
+    backgroundColor: colors.rose,
+    borderRadius: radii.round,
+    justifyContent: 'center',
+    minHeight: 24,
+    minWidth: 24,
+    paddingHorizontal: 7,
+  },
+  unreadText: { color: colors.paper, fontSize: 11, fontWeight: '800' },
   wordmark: { color: colors.rose, fontFamily: typography.display, fontSize: 15, fontWeight: '900', letterSpacing: -0.5 },
 });

@@ -123,6 +123,7 @@ export interface KinSnapshot {
   members: SpaceMember[];
   messages: Message[];
   messagePages: Record<Id, MessagePageState>;
+  unreadCounts: Record<Id, number>;
   memories: MemoryItem[];
 }
 

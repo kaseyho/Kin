@@ -20,11 +20,13 @@ it('labels message ownership and a recoverable failed state without color alone'
       currentUserId="maya"
       message={message}
       onOpenActions={jest.fn()}
+      onRemove={jest.fn()}
       onRetry={jest.fn()}
       senderName="Maya"
     />,
   );
 
   expect(screen.getByLabelText('Your message: A small thing worth remembering. Actions available')).toBeTruthy();
-  expect(screen.getByRole('button', { name: 'Not sent. Tap to retry' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Retry message' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Remove failed message' })).toBeTruthy();
 });

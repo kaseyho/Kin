@@ -7,6 +7,7 @@ const signedInSnapshot: KinSnapshot = {
   memories: [],
   messages: [],
   messagePages: {},
+  unreadCounts: {},
   profiles: [{
     avatarUri: '',
     createdAt: '2026-09-14T00:00:00.000Z',

@@ -27,7 +27,9 @@ describe('ChatListScreen', () => {
     );
 
     expect(await screen.findByText('Always. I will pick somewhere warm.')).toBeTruthy();
-    await user.press(screen.getByRole('button', { name: 'Open Kin Space with Jamie' }));
+    const row = screen.getByRole('button', { name: 'Open Kin Space with Jamie' });
+    expect(row.props.accessibilityHint).toBe('2 unread messages');
+    await user.press(row);
 
     expect(onOpenSpace).toHaveBeenCalledWith('space-maya-jamie');
   });

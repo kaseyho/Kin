@@ -9,6 +9,7 @@ export function createEmptySnapshot(): KinSnapshot {
     members: [],
     messages: [],
     messagePages: {},
+    unreadCounts: {},
     memories: [],
   };
 }
@@ -151,6 +152,7 @@ export function createDemoSnapshot(): KinSnapshot {
         oldestMessageId: 'message-first-date',
       },
     },
+    unreadCounts: { 'space-maya-jamie': 2 },
     memories: [
       {
         id: 'memory-lanterns',

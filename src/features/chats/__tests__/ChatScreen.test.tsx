@@ -58,12 +58,42 @@ describe('ChatScreen', () => {
 
     await user.type(screen.getByLabelText('Message Jamie'), 'Save me a seat');
     await user.press(screen.getByRole('button', { name: 'Send' }));
-    await user.press(await screen.findByRole('button', { name: 'Not sent. Tap to retry' }));
+    await user.press(await screen.findByRole('button', { name: 'Retry message' }));
 
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Not sent. Tap to retry' })).toBeNull(),
+      expect(screen.queryByRole('button', { name: 'Retry message' })).toBeNull(),
     );
     expect(screen.getAllByText('Save me a seat')).toHaveLength(1);
+  });
+
+  it('removes a failed send separately from retrying it', async () => {
+    const repository = createTestRepository({ failNextSend: () => true });
+    const user = userEvent.setup();
+    await renderDemoChat({ repository });
+
+    await user.type(screen.getByLabelText('Message Jamie'), 'Discard this');
+    await user.press(screen.getByRole('button', { name: 'Send' }));
+    await user.press(await screen.findByRole('button', { name: 'Remove failed message' }));
+
+    await waitFor(() => expect(screen.queryByText('Discard this')).toBeNull());
+  });
+
+  it('marks partner messages read when the conversation opens', async () => {
+    const repository = createTestRepository();
+    await repository.resetDemo();
+    const markSpaceRead = jest.spyOn(repository, 'markSpaceRead');
+
+    await renderKin(
+      <ChatScreen
+        mediaPicker={cancelledPicker}
+        onOpenRelationship={jest.fn()}
+        spaceId="space-maya-jamie"
+      />,
+      repository,
+    );
+
+    await waitFor(() => expect(markSpaceRead).toHaveBeenCalledWith('space-maya-jamie'));
+    expect((await repository.load()).unreadCounts['space-maya-jamie']).toBe(0);
   });
 
   it('sends a selected image and leaves text messaging usable after cancellation', async () => {

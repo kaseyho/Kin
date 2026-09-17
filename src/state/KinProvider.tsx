@@ -117,6 +117,18 @@ export function KinProvider({ active = true, children, repository }: KinProvider
   const resetDemo = useCallback(async () => {
     await repository.resetDemo();
   }, [repository]);
+  const removeFailedMessage = useCallback(
+    (messageId: Id) => repository.removeFailedMessage(messageId),
+    [repository],
+  );
+  const loadOlderMessages = useCallback(
+    (spaceId: Id) => repository.loadOlderMessages(spaceId),
+    [repository],
+  );
+  const markSpaceRead = useCallback(
+    (spaceId: Id) => repository.markSpaceRead(spaceId),
+    [repository],
+  );
 
   const value = useMemo<KinContextValue>(
     () => ({
@@ -135,9 +147,9 @@ export function KinProvider({ active = true, children, repository }: KinProvider
       submitContentReport: (input) => repository.submitContentReport(input),
       sendMessage: (input) => repository.sendMessage(input),
       retryMessage: (messageId) => repository.retryMessage(messageId),
-      removeFailedMessage: (messageId) => repository.removeFailedMessage(messageId),
-      loadOlderMessages: (spaceId) => repository.loadOlderMessages(spaceId),
-      markSpaceRead: (spaceId) => repository.markSpaceRead(spaceId),
+      removeFailedMessage,
+      loadOlderMessages,
+      markSpaceRead,
       addReaction: (input) => repository.addReaction(input),
       updateSpacePreferences: (input) => repository.updateSpacePreferences(input),
       saveMemory: (input) => repository.saveMemory(input),
@@ -148,7 +160,7 @@ export function KinProvider({ active = true, children, repository }: KinProvider
       deleteLocalSpace: (spaceId, userId, confirmation) =>
         repository.deleteLocalSpace(spaceId, userId, confirmation),
     }),
-    [active, error, repository, resetDemo, snapshot, status],
+    [active, error, loadOlderMessages, markSpaceRead, removeFailedMessage, repository, resetDemo, snapshot, status],
   );
 
   return <KinContext.Provider value={value}>{children}</KinContext.Provider>;

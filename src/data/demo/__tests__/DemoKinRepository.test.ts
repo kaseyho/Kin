@@ -136,6 +136,7 @@ describe('DemoKinRepository', () => {
       memories: [],
       messages: [],
       messagePages: {},
+      unreadCounts: {},
       profiles: [
         { avatarUri: 'maya.png', createdAt: '2026-09-13T08:00:00.000Z', displayName: 'Maya', id: 'maya' },
         { avatarUri: 'jamie.png', createdAt: '2026-09-13T08:00:00.000Z', displayName: 'Jamie', id: 'jamie' },

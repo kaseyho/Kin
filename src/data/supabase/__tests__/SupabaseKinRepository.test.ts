@@ -15,6 +15,7 @@ interface FakeClientOptions {
   removeSpaceAfter?: readonly string[];
   messageRows?: MessageRow[];
   ambiguousSendOnce?: boolean;
+  unreadCount?: number;
 }
 
 function createFakeClient(options: FakeClientOptions = {}) {
@@ -175,6 +176,12 @@ function createFakeClient(options: FakeClientOptions = {}) {
     }
     if (name === 'mark_space_read') {
       return { data: '2026-09-17T01:01:00.000Z', error: null };
+    }
+    if (name === 'get_my_unread_counts') {
+      return {
+        data: [{ space_id: SPACE_ID, unread_count: options.unreadCount ?? 0 }],
+        error: null,
+      };
     }
     return { data: null, error: null };
   });
@@ -498,12 +505,15 @@ describe('SupabaseKinRepository production messaging', () => {
   });
 
   it('marks a Space read through the actor-derived RPC', async () => {
-    const fake = createFakeClient();
+    const fake = createFakeClient({ unreadCount: 3 });
     const repository = createSupabaseKinRepository(fake.client);
-    await repository.load();
+    expect((await repository.load()).unreadCounts[SPACE_ID]).toBe(3);
+    const emitted: number[] = [];
+    repository.subscribe((snapshot) => emitted.push(snapshot.unreadCounts[SPACE_ID] ?? 0));
 
     await repository.markSpaceRead(SPACE_ID);
 
     expect(fake.rpc).toHaveBeenCalledWith('mark_space_read', { target_space_id: SPACE_ID });
+    expect(emitted.at(-1)).toBe(0);
   });
 });
