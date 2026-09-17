@@ -13,6 +13,7 @@ export interface ProfileRow {
   id: string;
   display_name: string;
   avatar_uri: string;
+  notification_previews_enabled: boolean;
   created_at: string;
 }
 
@@ -29,6 +30,7 @@ export interface MemberRow {
   role: 'owner' | 'member';
   joined_at: string;
   archived: boolean;
+  last_read_at: string;
   left_at?: string | null;
 }
 

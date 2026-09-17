@@ -200,13 +200,12 @@ select throws_ok(
 from space_test_state
 where label = 'revoked_invite';
 
-insert into public.messages (id, space_id, sender_id, kind, body)
-values (
+select public.send_kin_message(
   '31000000-0000-0000-0000-000000000001',
   (select value::uuid from space_test_state where label = 'primary_space'),
-  auth.uid(),
   'text',
-  'Report fixture message'
+  'Report fixture message',
+  null
 );
 
 select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000001', true);
@@ -399,13 +398,12 @@ select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000005
 select public.redeem_space_invite((select value from space_test_state where label = 'leave_invite'));
 
 select set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000004', true);
-insert into public.messages (id, space_id, sender_id, kind, body)
-values (
+select public.send_kin_message(
   '31000000-0000-0000-0000-000000000002',
   (select value::uuid from space_test_state where label = 'leave_space'),
-  auth.uid(),
   'text',
-  'Shared history remains available'
+  'Shared history remains available',
+  null
 );
 insert into public.memory_items (
   id, space_id, created_by, kind, visibility, title, occurred_on
