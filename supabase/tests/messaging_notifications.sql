@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(26);
+select plan(28);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -247,11 +247,46 @@ select throws_ok(
 );
 
 select set_config('request.jwt.claim.sub', '14000000-0000-0000-0000-000000000002', true);
+select public.register_push_installation(
+  'account-switch-old-installation',
+  'ExponentPushToken[account-switch-device]',
+  'ios'
+);
+select set_config('request.jwt.claim.sub', '14000000-0000-0000-0000-000000000001', true);
+select public.register_push_installation(
+  'account-switch-new-installation',
+  'ExponentPushToken[account-switch-device]',
+  'ios',
+  'account-switch-old-installation'
+);
+reset role;
 select ok(
-  public.deactivate_push_installation('recipient-installation-0001'),
-  'the installation owner can deactivate their current device'
+  exists (
+    select 1 from public.push_installations
+    where user_id = '14000000-0000-0000-0000-000000000001'
+      and installation_id = 'account-switch-new-installation'
+      and expo_push_token = 'ExponentPushToken[account-switch-device]'
+  ) and not exists (
+    select 1 from public.push_installations
+    where installation_id = 'account-switch-old-installation'
+  ),
+  'a device can safely transfer its token after a failed previous-account deactivation'
 );
 
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '14000000-0000-0000-0000-000000000002', true);
+select ok(
+  public.deactivate_push_installation('recipient-installation-0001'),
+  'the installation owner can remove their current device'
+);
+reset role;
+select is(
+  (select count(*) from public.push_installations where installation_id = 'recipient-installation-0001'),
+  0::bigint,
+  'deactivation releases the installation for a future account on the same device'
+);
+
+set local role authenticated;
 select set_config('request.jwt.claim.sub', '14000000-0000-0000-0000-000000000001', true);
 select public.send_kin_message(
   '34000000-0000-0000-0000-000000000057',

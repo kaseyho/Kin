@@ -24,7 +24,10 @@ function requireOtp(token: string): string {
   return token;
 }
 
-export function createSupabaseAccountService(client: SupabaseClient): AccountService {
+export function createSupabaseAccountService(
+  client: SupabaseClient,
+  lifecycle: { beforeDelete?: () => Promise<void> } = {},
+): AccountService {
   async function accessToken(): Promise<string> {
     const result = await client.auth.getSession();
     if (result.error || !result.data.session?.access_token) {
@@ -69,6 +72,11 @@ export function createSupabaseAccountService(client: SupabaseClient): AccountSer
 
     async deleteAccount() {
       const token = await accessToken();
+      try {
+        await lifecycle.beforeDelete?.();
+      } catch {
+        // Account deletion removes installation rows server-side; cleanup failure is non-blocking.
+      }
       const result = await client.functions.invoke<{ deleted?: boolean }>('delete-account', {
         headers: { Authorization: `Bearer ${token}` },
         method: 'POST',

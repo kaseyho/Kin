@@ -207,6 +207,7 @@ export interface Database {
           target_installation_id: string;
           target_expo_push_token: string;
           target_platform: 'ios' | 'android';
+          previous_installation_id?: string | null;
         };
         Returns: string;
       };

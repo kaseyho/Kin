@@ -10,6 +10,7 @@ import { useAuth } from '@/state/useAuth';
 import { useKin } from '@/state/useKin';
 import { AccountActions } from './AccountActions';
 import { EditProfileSheet } from './EditProfileSheet';
+import { NotificationSettings } from '@/features/notifications/NotificationSettings';
 
 interface ProfileScreenProps {
   onOpenKinPlus: () => void;
@@ -79,6 +80,8 @@ export function ProfileScreen({ onOpenKinPlus, onSignedOut }: ProfileScreenProps
           <Text style={styles.sectionTitle}>Private by default</Text>
           <Text style={styles.copy}>Remembered items start private to you. Kin has no public profile, relationship score, advertising, or silent relationship analysis.</Text>
         </View>
+
+        <NotificationSettings />
 
         <View style={styles.section}>
           <Text style={styles.label}>ARCHIVED KIN SPACES</Text>

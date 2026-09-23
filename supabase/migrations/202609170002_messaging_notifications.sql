@@ -283,7 +283,8 @@ grant execute on function public.get_my_unread_counts() to authenticated;
 create or replace function public.register_push_installation(
   target_installation_id text,
   target_expo_push_token text,
-  target_platform text
+  target_platform text,
+  previous_installation_id text default null
 )
 returns uuid
 language plpgsql
@@ -294,14 +295,38 @@ declare
   actor_id uuid := auth.uid();
   existing_owner uuid;
   installation_uuid uuid;
+  token_installation_id text;
+  token_owner uuid;
 begin
   if actor_id is null then
     raise exception 'KIN_AUTH_REQUIRED' using errcode = '28000';
   end if;
   if length(trim(target_installation_id)) not between 8 and 200
     or length(trim(target_expo_push_token)) not between 20 and 300
-    or target_platform not in ('ios', 'android') then
+    or target_platform not in ('ios', 'android')
+    or (
+      previous_installation_id is not null
+      and (
+        length(trim(previous_installation_id)) not between 8 and 200
+        or trim(previous_installation_id) = trim(target_installation_id)
+      )
+    ) then
     raise exception 'KIN_PUSH_INSTALLATION_INVALID' using errcode = '22023';
+  end if;
+
+  select user_id, installation_id into token_owner, token_installation_id
+  from public.push_installations
+  where expo_push_token = trim(target_expo_push_token)
+  for update;
+  if token_installation_id is not null
+    and token_installation_id <> trim(target_installation_id) then
+    if token_owner = actor_id
+      or token_installation_id = trim(coalesce(previous_installation_id, '')) then
+      delete from public.push_installations
+      where installation_id = token_installation_id;
+    else
+      raise exception 'KIN_PUSH_INSTALLATION_OWNED' using errcode = '23505';
+    end if;
   end if;
 
   select user_id into existing_owner
@@ -345,9 +370,9 @@ begin
 end;
 $$;
 
-revoke all on function public.register_push_installation(text, text, text)
+revoke all on function public.register_push_installation(text, text, text, text)
 from public, anon, authenticated, service_role;
-grant execute on function public.register_push_installation(text, text, text)
+grant execute on function public.register_push_installation(text, text, text, text)
 to authenticated;
 
 create or replace function public.deactivate_push_installation(target_installation_id text)
@@ -357,18 +382,16 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  updated_count integer;
+  deleted_count integer;
 begin
   if auth.uid() is null then
     raise exception 'KIN_AUTH_REQUIRED' using errcode = '28000';
   end if;
-  update public.push_installations
-  set active = false,
-      updated_at = now()
+  delete from public.push_installations
   where user_id = auth.uid()
     and installation_id = trim(target_installation_id);
-  get diagnostics updated_count = row_count;
-  return updated_count = 1;
+  get diagnostics deleted_count = row_count;
+  return deleted_count = 1;
 end;
 $$;
 

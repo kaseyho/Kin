@@ -1,0 +1,1 @@
+export { createPlatformNotificationService } from './expo';

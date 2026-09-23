@@ -5,6 +5,7 @@ import type { Database } from '@/data/supabase/database.types';
 import type { PremiumService } from '@/services/billing/contracts';
 import type { AuthService } from '@/services/auth/contracts';
 import type { AccountService } from '@/services/account/contracts';
+import type { NotificationService } from '@/services/notifications/contracts';
 
 import { createAppRuntime } from '../createAppRuntime';
 
@@ -22,6 +23,7 @@ const repository = {} as KinRepository;
 const premiumService = {} as PremiumService;
 const authService = {} as AuthService;
 const accountService = {} as AccountService;
+const notificationService = {} as NotificationService;
 
 describe('createAppRuntime', () => {
   it('turns invalid configuration into a renderable result', () => {
@@ -40,6 +42,7 @@ describe('createAppRuntime', () => {
       {
         createAccountService: () => accountService,
         createAuthService: () => authService,
+        createNotificationService: () => notificationService,
         createPremiumService: () => premiumService,
         createRepository: () => repository,
       },
@@ -54,6 +57,7 @@ describe('createAppRuntime', () => {
         supportEmail: 'support@kin.invalid',
       },
       authService,
+      notificationService,
       premiumService,
       repository,
       status: 'ready',
@@ -67,6 +71,7 @@ describe('createAppRuntime', () => {
       {
         createAccountService: () => accountService,
         createAuthService: () => authService,
+        createNotificationService: () => notificationService,
         createPremiumService: () => premiumService,
         createRepository: () => { throw new Error('construction failed'); },
       },
@@ -92,6 +97,10 @@ describe('createAppRuntime', () => {
           clientsSeen.push(suppliedClient);
           return authService;
         },
+        createNotificationService: (_storage, _values, _environment, suppliedClient) => {
+          clientsSeen.push(suppliedClient);
+          return notificationService;
+        },
         createPremiumService: () => premiumService,
         createRepository: (_storage, _values, _environment, suppliedClient) => {
           clientsSeen.push(suppliedClient);
@@ -112,10 +121,11 @@ describe('createAppRuntime', () => {
         supabaseUrl: 'http://127.0.0.1:54321',
       },
       authService,
+      notificationService,
       premiumService,
       repository,
       status: 'ready',
     });
-    expect(clientsSeen).toEqual([client, client, client]);
+    expect(clientsSeen).toEqual([client, client, client, client]);
   });
 });

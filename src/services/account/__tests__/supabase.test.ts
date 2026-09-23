@@ -94,6 +94,18 @@ describe('createSupabaseAccountService', () => {
     expect(fake.events).toEqual(['delete-account', 'sign-out']);
   });
 
+  it('attempts notification installation cleanup before deleting the account', async () => {
+    const fake = createClientDouble();
+    const beforeDelete = jest.fn(async () => {
+      fake.events.push('deactivate-installation');
+      throw new Error('offline');
+    });
+
+    await expect(createSupabaseAccountService(fake.client, { beforeDelete }).deleteAccount())
+      .resolves.toEqual({ deleted: true });
+    expect(fake.events).toEqual(['deactivate-installation', 'delete-account', 'sign-out']);
+  });
+
   it('does not sign out when deletion is not confirmed', async () => {
     const fake = createClientDouble();
     fake.functions.invoke.mockResolvedValueOnce({ data: { deleted: false }, error: null } as never);

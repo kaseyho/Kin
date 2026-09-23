@@ -32,6 +32,7 @@ import { ConversationStatusBanner } from './ConversationStatusBanner';
 import { MessageActionSheet } from './MessageActionSheet';
 import { MessageList } from './MessageList';
 import { StickerPicker } from './StickerPicker';
+import { NotificationEnablePrompt } from '@/features/notifications/NotificationEnablePrompt';
 
 interface ChatScreenProps {
   spaceId: string;
@@ -231,6 +232,7 @@ export function ChatScreen({
         </Pressable>
       </View>
       <ConversationStatusBanner phase={connectivity.phase} />
+      {otherMember ? <NotificationEnablePrompt partnerName={partnerName} /> : null}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.body}>
         <MessageList
           currentUserId={currentUserId}

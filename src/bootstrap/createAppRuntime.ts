@@ -19,6 +19,8 @@ import { createDemoAuthService } from '@/services/auth/demo';
 import { createSupabaseAuthService } from '@/services/auth/supabase';
 import type { PremiumService } from '@/services/billing/contracts';
 import { createPremiumService } from '@/services/billing';
+import type { NotificationService } from '@/services/notifications/contracts';
+import { createNotificationService } from '@/services/notifications';
 
 export type AppRuntime =
   | {
@@ -26,6 +28,7 @@ export type AppRuntime =
       environment: KinEnvironment;
       accountService: AccountService;
       authService: AuthService;
+      notificationService: NotificationService;
       repository: KinRepository;
       premiumService: PremiumService;
     }
@@ -37,6 +40,7 @@ interface RuntimeFactories {
     values: EnvironmentValues,
     environment: KinEnvironment,
     client?: SupabaseClient<Database>,
+    notificationService?: NotificationService,
   ) => AccountService;
   createAuthService: (
     storage: StorageAdapter,
@@ -55,6 +59,12 @@ interface RuntimeFactories {
     values: EnvironmentValues,
     environment: KinEnvironment,
   ) => PremiumService;
+  createNotificationService: (
+    storage: StorageAdapter,
+    values: EnvironmentValues,
+    environment: KinEnvironment,
+    client?: SupabaseClient<Database>,
+  ) => NotificationService;
   createSupabaseClient?: (options: {
     publishableKey: string;
     storage: StorageAdapter;
@@ -63,10 +73,13 @@ interface RuntimeFactories {
 }
 
 const defaultFactories: RuntimeFactories = {
-  createAccountService: (_storage, _values, environment, client) =>
+  createAccountService: (_storage, _values, environment, client, notificationService) =>
     environment.mode === 'demo'
       ? createDemoAccountService()
-      : createSupabaseAccountService(requireConnectedClient(client)),
+      : createSupabaseAccountService(requireConnectedClient(client), {
+          beforeDelete: () => notificationService?.deactivateCurrentInstallation()
+            ?? Promise.resolve(),
+        }),
   createAuthService: (_storage, _values, environment, client) =>
     environment.mode === 'demo'
       ? createDemoAuthService()
@@ -79,6 +92,11 @@ const defaultFactories: RuntimeFactories = {
     deployment: environment.deployment,
     storage,
     values,
+  }),
+  createNotificationService: (storage, _values, environment, client) => createNotificationService({
+    client,
+    deployment: environment.deployment,
+    storage,
   }),
   createSupabaseClient,
 };
@@ -104,10 +122,23 @@ export function createAppRuntime(
           url: environment.supabaseUrl,
         })
       : undefined;
+    const notificationService = factories.createNotificationService(
+      storage,
+      values,
+      environment,
+      client,
+    );
     return {
-      accountService: factories.createAccountService(storage, values, environment, client),
+      accountService: factories.createAccountService(
+        storage,
+        values,
+        environment,
+        client,
+        notificationService,
+      ),
       authService: factories.createAuthService(storage, values, environment, client),
       environment,
+      notificationService,
       premiumService: factories.createPremiumService(storage, values, environment),
       repository: factories.createRepository(storage, values, environment, client),
       status: 'ready',

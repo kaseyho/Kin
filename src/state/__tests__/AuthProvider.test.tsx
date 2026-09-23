@@ -1,9 +1,10 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { useState } from 'react';
 import { Pressable, Text } from 'react-native';
 
 import type { AuthService, AuthState, AuthUser } from '@/services/auth/contracts';
 import type { AccountService } from '@/services/account/contracts';
+import type { NotificationService } from '@/services/notifications/contracts';
 import { AuthProvider } from '../AuthProvider';
 import { useAuth } from '../useAuth';
 
@@ -64,6 +65,25 @@ const accountService = {
   requestFreshOtp: async () => undefined,
   verifyFreshOtp: async () => undefined,
 } satisfies AccountService;
+
+function createNotificationService(
+  deactivateCurrentInstallation: () => Promise<void>,
+): NotificationService {
+  const state = {
+    deviceEnabled: true,
+    installationRegistered: true,
+    previewsEnabled: true,
+    status: 'granted' as const,
+  };
+  return {
+    deactivateCurrentInstallation,
+    load: async () => state,
+    openSettings: async () => undefined,
+    requestPermissionAndRegister: async () => state,
+    setCurrentDeviceEnabled: async () => state,
+    setPreviewsEnabled: async () => state,
+  };
+}
 
 function Probe() {
   const auth = useAuth();
@@ -192,5 +212,37 @@ describe('AuthProvider', () => {
     );
 
     expect(screen.getByText('account-ready')).toBeTruthy();
+  });
+
+  it('attempts device deactivation before sign-out without trapping the user on cleanup failure', async () => {
+    const service = new FakeAuthService();
+    const events: string[] = [];
+    const originalSignOut = service.signOut.bind(service);
+    service.signOut = jest.fn(async () => {
+      events.push('sign-out');
+      await originalSignOut();
+    });
+    const notificationService = createNotificationService(jest.fn(async () => {
+      events.push('deactivate');
+      throw new Error('offline');
+    }));
+    await render(
+      <AuthProvider
+        accountService={accountService}
+        notificationService={notificationService}
+        service={service}
+      >
+        <Probe />
+      </AuthProvider>,
+    );
+    await act(async () => service.finishLoading({
+      status: 'signed-in',
+      user: { email: 'maya@example.com', id: 'user-1' },
+    }));
+
+    await act(async () => fireEvent.press(screen.getByText('Sign out')));
+
+    await waitFor(() => expect(screen.getByText('signed-out')).toBeTruthy());
+    expect(events).toEqual(['deactivate', 'sign-out']);
   });
 });

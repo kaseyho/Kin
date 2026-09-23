@@ -3,6 +3,8 @@ import { fireEvent, screen, userEvent, waitFor } from '@testing-library/react-na
 import type { MediaPicker } from '@/services/media/contracts';
 import { createTestRepository, renderKin } from '../../../../tests/helpers/renderKin';
 import { ChatScreen } from '../ChatScreen';
+import type { NotificationContextValue } from '@/state/NotificationProvider';
+import { NotificationContext } from '@/state/NotificationProvider';
 
 const cancelledPicker: MediaPicker = {
   pickImage: async () => null,
@@ -31,6 +33,45 @@ async function renderDemoChat(
 }
 
 describe('ChatScreen', () => {
+  it('offers notifications inside an established two-person conversation without auto-requesting', async () => {
+    const repository = createTestRepository();
+    await repository.resetDemo();
+    const requestPermissionAndRegister = jest.fn(async () => undefined);
+    const notificationContext: NotificationContextValue = {
+      busy: false,
+      deactivateCurrentInstallation: async () => undefined,
+      error: '',
+      openSettings: async () => undefined,
+      refresh: async () => undefined,
+      requestPermissionAndRegister,
+      setCurrentDeviceEnabled: async () => undefined,
+      setPreviewsEnabled: async () => undefined,
+      state: {
+        deviceEnabled: true,
+        installationRegistered: false,
+        previewsEnabled: true,
+        status: 'not-determined',
+      },
+    };
+    const user = userEvent.setup();
+
+    await renderKin(
+      <NotificationContext.Provider value={notificationContext}>
+        <ChatScreen
+          mediaPicker={cancelledPicker}
+          onOpenRelationship={jest.fn()}
+          spaceId="space-maya-jamie"
+        />
+      </NotificationContext.Provider>,
+      repository,
+    );
+
+    expect(await screen.findByText('Get a quiet heads-up when Jamie writes.')).toBeTruthy();
+    expect(requestPermissionAndRegister).not.toHaveBeenCalled();
+    await user.press(screen.getByRole('button', { name: 'Enable message notifications' }));
+    expect(requestPermissionAndRegister).toHaveBeenCalledTimes(1);
+  });
+
   it('shows received history and sends a text message with a timestamp', async () => {
     const user = userEvent.setup();
     await renderDemoChat();
