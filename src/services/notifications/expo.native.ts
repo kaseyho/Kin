@@ -17,7 +17,10 @@ const PENDING_DEACTIVATION_KEY = 'kin.notification-deactivation.v1';
 const DEVICE_DISABLED_KEY = 'kin.notification-device-disabled.v1';
 
 export interface NativeNotificationDependencies {
+  addNotificationResponseListener: typeof Notifications.addNotificationResponseReceivedListener;
+  clearLastNotificationResponse: typeof Notifications.clearLastNotificationResponseAsync;
   getProjectId: () => string | null;
+  getLastNotificationResponse: typeof Notifications.getLastNotificationResponseAsync;
   getPermissions: typeof Notifications.getPermissionsAsync;
   requestPermissions: typeof Notifications.requestPermissionsAsync;
   getPushToken: typeof Notifications.getExpoPushTokenAsync;
@@ -29,10 +32,13 @@ export interface NativeNotificationDependencies {
 }
 
 const defaultDependencies: NativeNotificationDependencies = {
+  addNotificationResponseListener: Notifications.addNotificationResponseReceivedListener,
+  clearLastNotificationResponse: Notifications.clearLastNotificationResponseAsync,
   getProjectId: () => Constants.easConfig?.projectId
     ?? (Constants.expoConfig?.extra?.eas as { projectId?: string } | undefined)?.projectId
     ?? null,
   getPermissions: Notifications.getPermissionsAsync,
+  getLastNotificationResponse: Notifications.getLastNotificationResponseAsync,
   requestPermissions: Notifications.requestPermissionsAsync,
   getPushToken: Notifications.getExpoPushTokenAsync,
   isDevice: Device.isDevice,
@@ -114,6 +120,13 @@ export function createPlatformNotificationService(
   }
 
   const service: NotificationService = {
+    clearLastResponse: dependencies.clearLastNotificationResponse,
+
+    async getLastResponse() {
+      const response = await dependencies.getLastNotificationResponse();
+      return response ? normalizeResponse(response) : null;
+    },
+
     async load() {
       state = { ...state, previewsEnabled: await loadPreviewsEnabled() };
       await retryPendingDeactivation();
@@ -221,8 +234,24 @@ export function createPlatformNotificationService(
     },
 
     openSettings: dependencies.openSettings,
+
+    subscribeToResponses(listener) {
+      const subscription = dependencies.addNotificationResponseListener((response) => {
+        listener(normalizeResponse(response));
+      });
+      return () => subscription.remove();
+    },
   };
   return service;
+}
+
+function normalizeResponse(
+  response: Notifications.NotificationResponse,
+): { data: unknown; id: string } {
+  return {
+    data: response.notification.request.content.data,
+    id: `${response.notification.request.identifier}:${response.actionIdentifier}`,
+  };
 }
 
 function randomUuid(): string {

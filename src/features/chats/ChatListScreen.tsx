@@ -2,17 +2,25 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { InlineNotice } from '@/components/InlineNotice';
 import { ScreenState } from '@/components/ScreenState';
 import { colors, radii, relationshipThemes, spacing, typography } from '@/design/tokens';
 import type { KinSpace, Message, UserProfile } from '@/domain/models';
 import { useKin } from '@/state/useKin';
 
 interface ChatListScreenProps {
+  notice?: string;
+  onDismissNotice?: () => void;
   onNewSpace: () => void;
   onOpenSpace: (spaceId: string) => void;
 }
 
-export function ChatListScreen({ onNewSpace, onOpenSpace }: ChatListScreenProps) {
+export function ChatListScreen({
+  notice,
+  onDismissNotice,
+  onNewSpace,
+  onOpenSpace,
+}: ChatListScreenProps) {
   const kin = useKin();
   if (kin.status === 'loading') {
     return <ScreenState message="Bringing your people close…" title="Opening Kin" />;
@@ -46,6 +54,7 @@ export function ChatListScreen({ onNewSpace, onOpenSpace }: ChatListScreenProps)
     return (
       <SafeAreaView style={styles.screen}>
         <Header />
+        <RecoveryNotice message={notice} onDismiss={onDismissNotice} />
         <View style={styles.emptyWrap}>
           <ScreenState
             actionLabel="Create your first Kin Space"
@@ -62,6 +71,7 @@ export function ChatListScreen({ onNewSpace, onOpenSpace }: ChatListScreenProps)
   return (
     <SafeAreaView style={styles.screen}>
       <Header />
+      <RecoveryNotice message={notice} onDismiss={onDismissNotice} />
       <ScrollView contentContainerStyle={styles.list}>
         <Text style={styles.sectionLabel}>YOUR KIN SPACES</Text>
         {spaces.map((space) => {
@@ -88,6 +98,20 @@ export function ChatListScreen({ onNewSpace, onOpenSpace }: ChatListScreenProps)
         <Text style={styles.newButtonGlyph}>＋</Text>
       </Pressable>
     </SafeAreaView>
+  );
+}
+
+function RecoveryNotice({ message, onDismiss }: { message?: string; onDismiss?: () => void }) {
+  if (!message) return null;
+  return (
+    <View style={styles.noticeWrap}>
+      <InlineNotice
+        actionLabel="Dismiss notice"
+        message={message}
+        onAction={onDismiss}
+        tone="neutral"
+      />
+    </View>
   );
 }
 
@@ -201,6 +225,7 @@ const styles = StyleSheet.create({
     width: 54,
   },
   newButtonGlyph: { color: colors.paper, fontSize: 28, fontWeight: '300', lineHeight: 31 },
+  noticeWrap: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   pressed: { opacity: 0.72 },
   preview: { color: colors.mutedInk, fontSize: 14, marginTop: 5 },
   row: {

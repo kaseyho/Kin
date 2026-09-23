@@ -21,6 +21,10 @@ import { useAuth } from '@/state/useAuth';
 import { PremiumProvider } from '@/features/premium/PremiumProvider';
 import { ConnectivityProvider } from '@/state/ConnectivityProvider';
 import { NotificationProvider } from '@/state/NotificationProvider';
+import {
+  NotificationRouter,
+  NotificationSignOutCleaner,
+} from '@/features/notifications/NotificationRouter';
 
 const runtime = createAppRuntime(AsyncStorage);
 
@@ -75,8 +79,10 @@ function AuthenticatedApp({
   return (
     <PremiumProvider service={readyRuntime.premiumService}>
       <NotificationProvider active={kinActive} service={readyRuntime.notificationService}>
+        <NotificationSignOutCleaner service={readyRuntime.notificationService} storage={AsyncStorage} />
         <ConnectivityProvider>
           <KinProvider key={kinSessionKey} active={kinActive} repository={readyRuntime.repository}>
+            <NotificationRouter service={readyRuntime.notificationService} storage={AsyncStorage} />
             <StatusBar style="dark" />
             <Stack
               screenOptions={{

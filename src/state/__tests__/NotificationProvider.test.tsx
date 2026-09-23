@@ -14,7 +14,9 @@ const available: NotificationState = {
 
 function createService(): jest.Mocked<NotificationService> {
   return {
+    clearLastResponse: jest.fn(async () => undefined),
     deactivateCurrentInstallation: jest.fn(async () => undefined),
+    getLastResponse: jest.fn(async () => null),
     load: jest.fn(async () => available),
     openSettings: jest.fn(async () => undefined),
     requestPermissionAndRegister: jest.fn(async (): Promise<NotificationState> => ({
@@ -29,6 +31,9 @@ function createService(): jest.Mocked<NotificationService> {
       status: 'granted',
     })),
     setPreviewsEnabled: jest.fn(async (enabled) => ({ ...available, previewsEnabled: enabled })),
+    subscribeToResponses: jest.fn((
+      _listener: Parameters<NotificationService['subscribeToResponses']>[0],
+    ) => () => undefined),
   };
 }
 

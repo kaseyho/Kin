@@ -14,13 +14,21 @@ export interface NotificationState {
   message?: string;
 }
 
+export interface NotificationResponseHandoff {
+  data: unknown;
+  id: string;
+}
+
 export interface NotificationService {
+  clearLastResponse(): Promise<void>;
+  getLastResponse(): Promise<NotificationResponseHandoff | null>;
   load(): Promise<NotificationState>;
   requestPermissionAndRegister(): Promise<NotificationState>;
   setCurrentDeviceEnabled(enabled: boolean): Promise<NotificationState>;
   setPreviewsEnabled(enabled: boolean): Promise<NotificationState>;
   deactivateCurrentInstallation(): Promise<void>;
   openSettings(): Promise<void>;
+  subscribeToResponses(listener: (response: NotificationResponseHandoff) => void): () => void;
 }
 
 export class NotificationError extends Error {
@@ -39,6 +47,8 @@ export function createUnavailableNotificationService(message: string): Notificat
     status: 'unavailable',
   };
   return {
+    async clearLastResponse() { return undefined; },
+    async getLastResponse() { return null; },
     async load() { return state; },
     async requestPermissionAndRegister() { return state; },
     async setCurrentDeviceEnabled() { return state; },
@@ -48,5 +58,6 @@ export function createUnavailableNotificationService(message: string): Notificat
     },
     async deactivateCurrentInstallation() { return undefined; },
     async openSettings() { return undefined; },
+    subscribeToResponses() { return () => undefined; },
   };
 }

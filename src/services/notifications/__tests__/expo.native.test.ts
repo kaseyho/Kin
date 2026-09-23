@@ -10,6 +10,7 @@ import {
 function createHarness(options: {
   permission?: { canAskAgain: boolean; granted: boolean };
   projectId?: string | null;
+  response?: unknown;
 } = {}) {
   const values = new Map<string, string>();
   const storage: StorageAdapter = {
@@ -39,8 +40,12 @@ function createHarness(options: {
     }),
   }));
   const permission = options.permission ?? { canAskAgain: true, granted: false };
+  const removeResponseListener = jest.fn();
   const dependencies: NativeNotificationDependencies = {
+    addNotificationResponseListener: jest.fn(() => ({ remove: removeResponseListener })),
+    clearLastNotificationResponse: jest.fn(async () => undefined),
     getPermissions: jest.fn(async () => permission) as unknown as NativeNotificationDependencies['getPermissions'],
+    getLastNotificationResponse: jest.fn(async () => options.response ?? null) as NativeNotificationDependencies['getLastNotificationResponse'],
     getProjectId: () => options.projectId === undefined ? 'project-1' : options.projectId,
     getPushToken: jest.fn(async () => ({ data: 'ExponentPushToken[kin-device-0001]', type: 'expo' })) as NativeNotificationDependencies['getPushToken'],
     isDevice: true,
@@ -54,6 +59,7 @@ function createHarness(options: {
   return {
     client,
     dependencies,
+    removeResponseListener,
     rpc,
     service: createPlatformNotificationService(client, storage, dependencies),
     storage,
@@ -168,5 +174,38 @@ describe('native notification installation service', () => {
       target_platform: 'ios',
     });
     expect(harness.values.has('kin.notification-deactivation.v1')).toBe(false);
+  });
+
+  it('normalizes only explicit notification responses for safe routing', async () => {
+    const nativeResponse = {
+      actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+      notification: {
+        request: {
+          content: { data: { body: 'private', path: '/space/space-1', spaceId: 'space-1' } },
+          identifier: 'notification-1',
+        },
+      },
+    };
+    const harness = createHarness({ response: nativeResponse });
+
+    await expect(harness.service.getLastResponse()).resolves.toEqual({
+      data: { body: 'private', path: '/space/space-1', spaceId: 'space-1' },
+      id: 'notification-1:expo.modules.notifications.actions.DEFAULT',
+    });
+
+    const listener = jest.fn();
+    const unsubscribe = harness.service.subscribeToResponses(listener);
+    const nativeListener = (harness.dependencies.addNotificationResponseListener as jest.Mock)
+      .mock.calls[0][0] as (response: unknown) => void;
+    nativeListener(nativeResponse);
+    expect(listener).toHaveBeenCalledWith({
+      data: { body: 'private', path: '/space/space-1', spaceId: 'space-1' },
+      id: 'notification-1:expo.modules.notifications.actions.DEFAULT',
+    });
+
+    unsubscribe();
+    expect(harness.removeResponseListener).toHaveBeenCalledTimes(1);
+    await harness.service.clearLastResponse();
+    expect(harness.dependencies.clearLastNotificationResponse).toHaveBeenCalledTimes(1);
   });
 });

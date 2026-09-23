@@ -76,12 +76,15 @@ function createNotificationService(
     status: 'granted' as const,
   };
   return {
+    clearLastResponse: async () => undefined,
     deactivateCurrentInstallation,
+    getLastResponse: async () => null,
     load: async () => state,
     openSettings: async () => undefined,
     requestPermissionAndRegister: async () => state,
     setCurrentDeviceEnabled: async () => state,
     setPreviewsEnabled: async () => state,
+    subscribeToResponses: () => () => undefined,
   };
 }
 

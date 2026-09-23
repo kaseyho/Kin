@@ -33,4 +33,27 @@ describe('ChatListScreen', () => {
 
     expect(onOpenSpace).toHaveBeenCalledWith('space-maya-jamie');
   });
+
+  it('explains and dismisses a notification target that is no longer available', async () => {
+    const repository = createTestRepository();
+    await repository.resetDemo();
+    const onDismissNotice = jest.fn();
+    const user = userEvent.setup();
+    await renderKin(
+      <ChatListScreen
+        notice="That conversation is no longer available. Your Chats are still here."
+        onDismissNotice={onDismissNotice}
+        onNewSpace={jest.fn()}
+        onOpenSpace={jest.fn()}
+      />,
+      repository,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'That conversation is no longer available. Your Chats are still here.',
+    );
+    await user.press(screen.getByRole('button', { name: 'Dismiss notice' }));
+
+    expect(onDismissNotice).toHaveBeenCalledTimes(1);
+  });
 });
