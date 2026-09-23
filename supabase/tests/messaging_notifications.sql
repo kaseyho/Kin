@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(28);
+select plan(42);
 
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -35,7 +35,14 @@ select ok(
   and has_function_privilege('service_role', 'public.claim_message_notification_jobs(integer)', 'execute')
   and not has_function_privilege('authenticated', 'public.complete_message_notification_job(uuid,uuid,text)', 'execute')
   and not has_function_privilege('authenticated', 'public.fail_message_notification_job(uuid,uuid,text,timestamp with time zone)', 'execute')
-  and not has_function_privilege('authenticated', 'public.complete_message_notification_receipt(uuid,text,boolean,text)', 'execute'),
+  and not has_function_privilege('authenticated', 'public.claim_message_notification_receipts(integer)', 'execute')
+  and has_function_privilege('service_role', 'public.claim_message_notification_receipts(integer)', 'execute')
+  and not has_function_privilege('authenticated', 'public.complete_message_notification_receipt(uuid,text,uuid,boolean,text)', 'execute')
+  and not has_function_privilege('authenticated', 'public.get_message_notification_payload(uuid,uuid)', 'execute')
+  and has_function_privilege('service_role', 'public.get_message_notification_payload(uuid,uuid)', 'execute')
+  and not has_function_privilege('authenticated', 'public.defer_message_notification_receipt(uuid,text,uuid,text,timestamp with time zone)', 'execute')
+  and not has_function_privilege('authenticated', 'public.retry_message_notification_receipt(uuid,text,uuid,text,timestamp with time zone)', 'execute')
+  and not has_function_privilege('authenticated', 'public.record_message_notification_heartbeat(text,integer,integer)', 'execute'),
   'message insertion and notification delivery use only the intended privileged contracts'
 );
 
@@ -298,7 +305,7 @@ select public.send_kin_message(
 reset role;
 select is(
   (select count(*) from public.message_notification_outbox),
-  1::bigint,
+  0::bigint,
   'an inactive installation suppresses new push work without blocking the message'
 );
 
@@ -321,7 +328,7 @@ select public.send_kin_message(
 reset role;
 select is(
   (select count(*) from public.message_notification_outbox),
-  1::bigint,
+  0::bigint,
   'a block suppresses new push work immediately'
 );
 delete from public.user_blocks
@@ -344,7 +351,7 @@ select public.send_kin_message(
 reset role;
 select is(
   (select count(*) from public.message_notification_outbox),
-  1::bigint,
+  0::bigint,
   'an inactive recipient membership suppresses new push work immediately'
 );
 update public.kin_space_members
@@ -367,6 +374,13 @@ select public.send_kin_message(
   'Push after reactivation',
   null
 );
+select public.send_kin_message(
+  '34000000-0000-0000-0000-000000000062',
+  '24000000-0000-0000-0000-000000000001',
+  'text',
+  'Second independently leased push',
+  null
+);
 reset role;
 
 set local role service_role;
@@ -382,6 +396,17 @@ select is(
   0::bigint,
   'a concurrent worker cannot claim active leases again'
 );
+select is(
+  (
+    select count(*)
+    from public.get_message_notification_payload(
+      (select id from claimed_message_jobs order by id limit 1),
+      (select processing_token from claimed_message_jobs order by id limit 1)
+    )
+  ),
+  1::bigint,
+  'only a matching active worker lease can read one private delivery payload'
+);
 select ok(
   public.complete_message_notification_job(
     (select id from claimed_message_jobs order by id limit 1),
@@ -396,10 +421,26 @@ select ok(
   ),
   'only matching worker lease tokens can acknowledge or fail claimed jobs'
 );
+update public.message_notification_outbox
+set receipt_next_attempt_at = now() - interval '1 minute'
+where expo_ticket_id = 'expo-ticket-test-1';
+create temporary table claimed_message_receipts as
+select * from public.claim_message_notification_receipts(300);
+select is(
+  (select count(*) from claimed_message_receipts),
+  1::bigint,
+  'the receipt worker claims a due accepted ticket'
+);
+select is(
+  (select count(*) from public.claim_message_notification_receipts(300)),
+  0::bigint,
+  'an overlapping receipt worker cannot claim the active receipt lease'
+);
 select ok(
   public.complete_message_notification_receipt(
-    (select id from claimed_message_jobs order by id limit 1),
+    (select id from claimed_message_receipts limit 1),
     'expo-ticket-test-1',
+    (select receipt_processing_token from claimed_message_receipts limit 1),
     true,
     ''
   ),
@@ -411,6 +452,244 @@ select ok(
   'a matching Expo receipt finalizes ticketed delivery without exposing the outbox to clients'
 );
 reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '14000000-0000-0000-0000-000000000002', true);
+select public.register_push_installation(
+  'recipient-installation-0002',
+  'ExponentPushToken[recipient-test-0003]',
+  'android'
+);
+select set_config('request.jwt.claim.sub', '14000000-0000-0000-0000-000000000001', true);
+select public.send_kin_message(
+  '34000000-0000-0000-0000-000000000061',
+  '24000000-0000-0000-0000-000000000001',
+  'text',
+  'Push every active installation',
+  null
+);
+reset role;
+select is(
+  (
+    select count(*)
+    from public.message_notification_outbox
+    where message_id = '34000000-0000-0000-0000-000000000061'
+  ),
+  2::bigint,
+  'one message creates one independently reconcilable job per active installation'
+);
+
+set local role service_role;
+create temporary table claimed_fanout_jobs as
+select * from public.claim_message_notification_jobs(500);
+select ok(
+  public.complete_message_notification_job(
+    (select id from claimed_fanout_jobs order by id limit 1),
+    (select processing_token from claimed_fanout_jobs order by id limit 1),
+    'expo-ticket-retry-1'
+  ),
+  'a claimed per-installation job can store its Expo ticket'
+);
+update public.message_notification_outbox
+set receipt_next_attempt_at = now() - interval '1 minute'
+where expo_ticket_id = 'expo-ticket-retry-1';
+create temporary table claimed_retry_receipt as
+select * from public.claim_message_notification_receipts(300);
+select ok(
+  public.retry_message_notification_receipt(
+    (select id from claimed_retry_receipt limit 1),
+    'expo-ticket-retry-1',
+    (select receipt_processing_token from claimed_retry_receipt limit 1),
+    'message_rate_exceeded',
+    now() + interval '1 minute'
+  ),
+  'a transient receipt can release its matching ticket for retry'
+);
+select ok(
+  exists (
+    select 1 from public.message_notification_outbox
+    where id = (select id from claimed_fanout_jobs order by id limit 1)
+      and status = 'pending'
+      and expo_ticket_id is null
+      and next_attempt_at > now()
+  ),
+  'the transient receipt retry is delayed and clears its stale ticket ID'
+);
+reset role;
+
+set local role service_role;
+select public.record_message_notification_heartbeat('succeeded', 3, 0);
+select ok(
+  exists (
+    select 1 from public.operator_maintenance_status
+    where worker = 'message-notifications'
+      and last_status = 'succeeded'
+      and last_claimed = 3
+      and last_succeeded_at is not null
+  ),
+  'the service-only heartbeat records exactly one durable liveness row'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '14000000-0000-0000-0000-000000000002', true);
+select public.register_push_installation(
+  'capped-installation-' || lpad(device::text, 4, '0'),
+  'ExponentPushToken[capped-device-' || lpad(device::text, 4, '0') || ']',
+  case when device % 2 = 0 then 'android' else 'ios' end
+)
+from generate_series(1, 6) device;
+reset role;
+select is(
+  (
+    select count(*) from public.push_installations
+    where user_id = '14000000-0000-0000-0000-000000000002'
+  ),
+  5::bigint,
+  'registration prunes an account to five installations under the serialized cap'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '14000000-0000-0000-0000-000000000001', true);
+select public.send_kin_message(
+  '34000000-0000-0000-0000-000000000063',
+  '24000000-0000-0000-0000-000000000001',
+  'text',
+  'Bounded five-device fanout',
+  null
+);
+reset role;
+select is(
+  (
+    select count(*) from public.message_notification_outbox
+    where message_id = '34000000-0000-0000-0000-000000000063'
+  ),
+  5::bigint,
+  'one message fans out to no more than five active installations'
+);
+
+update public.message_notification_outbox
+set status = 'processing',
+    processing_started_at = now() - interval '10 minutes',
+    processing_token = gen_random_uuid()
+where message_id = '34000000-0000-0000-0000-000000000063';
+set local role service_role;
+create temporary table bounded_expired_claim as
+select * from public.claim_message_notification_jobs(2);
+select is(
+  (select count(*) from bounded_expired_claim),
+  2::bigint,
+  'expired processing leases are reclaimed only up to the requested batch size'
+);
+select is(
+  (
+    select count(*) from public.message_notification_outbox
+    where message_id = '34000000-0000-0000-0000-000000000063'
+      and processing_started_at < now() - interval '5 minutes'
+  ),
+  3::bigint,
+  'bounded recovery leaves the rest of a large expired backlog untouched for later runs'
+);
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '14000000-0000-0000-0000-000000000001', true);
+select public.send_kin_message(
+  '34000000-0000-0000-0000-000000000064',
+  '24000000-0000-0000-0000-000000000001',
+  'text',
+  'Queued before a block',
+  null
+);
+reset role;
+insert into public.user_blocks (blocker_id, blocked_id, space_id)
+values (
+  '14000000-0000-0000-0000-000000000002',
+  '14000000-0000-0000-0000-000000000001',
+  '24000000-0000-0000-0000-000000000001'
+);
+update public.message_notification_outbox
+set status = 'processing',
+    processing_started_at = now(),
+    processing_token = '64000000-0000-0000-0000-000000000001',
+    completed_at = null
+where id = (
+  select id from public.message_notification_outbox
+  where message_id = '34000000-0000-0000-0000-000000000064'
+  order by id
+  limit 1
+);
+set local role service_role;
+select ok(
+  (
+    select count(*) from public.message_notification_outbox
+    where message_id = '34000000-0000-0000-0000-000000000064'
+      and status = 'failed'
+      and last_error_code = 'notification_relationship_blocked'
+  ) = 4
+  and (
+    select count(*) from public.get_message_notification_payload(
+      (select id from public.message_notification_outbox
+       where message_id = '34000000-0000-0000-0000-000000000064'
+         and processing_token = '64000000-0000-0000-0000-000000000001'),
+      '64000000-0000-0000-0000-000000000001'
+    )
+  ) = 0,
+  'a block cancels queued work and delivery-time authorization rejects a stale processing lease'
+);
+reset role;
+delete from public.user_blocks
+where blocker_id = '14000000-0000-0000-0000-000000000002'
+  and blocked_id = '14000000-0000-0000-0000-000000000001';
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '14000000-0000-0000-0000-000000000001', true);
+select public.send_kin_message(
+  '34000000-0000-0000-0000-000000000065',
+  '24000000-0000-0000-0000-000000000001',
+  'text',
+  'Queued before leaving',
+  null
+);
+reset role;
+update public.kin_space_members
+set left_at = now()
+where space_id = '24000000-0000-0000-0000-000000000001'
+  and user_id = '14000000-0000-0000-0000-000000000002';
+update public.message_notification_outbox
+set status = 'processing',
+    processing_started_at = now(),
+    processing_token = '65000000-0000-0000-0000-000000000001',
+    completed_at = null
+where id = (
+  select id from public.message_notification_outbox
+  where message_id = '34000000-0000-0000-0000-000000000065'
+  order by id
+  limit 1
+);
+set local role service_role;
+select ok(
+  (
+    select count(*) from public.message_notification_outbox
+    where message_id = '34000000-0000-0000-0000-000000000065'
+      and status = 'failed'
+      and last_error_code = 'notification_relationship_inactive'
+  ) = 4
+  and (
+    select count(*) from public.get_message_notification_payload(
+      (select id from public.message_notification_outbox
+       where message_id = '34000000-0000-0000-0000-000000000065'
+         and processing_token = '65000000-0000-0000-0000-000000000001'),
+      '65000000-0000-0000-0000-000000000001'
+    )
+  ) = 0,
+  'leaving cancels queued work and delivery-time authorization rejects a stale processing lease'
+);
+reset role;
+update public.kin_space_members
+set left_at = null
+where space_id = '24000000-0000-0000-0000-000000000001'
+  and user_id = '14000000-0000-0000-0000-000000000002';
 
 delete from auth.users where id = '14000000-0000-0000-0000-000000000002';
 select ok(

@@ -43,6 +43,20 @@ try {
     run('supabase', ['start'], { quiet: true });
     startedHere = true;
   }
+  run('supabase', [
+    'db',
+    'reset',
+    '--version',
+    '202609170002',
+    '--sql-paths',
+    'upgrade-tests/message_notification_delivery_seed.sql',
+  ]);
+  run('supabase', ['migration', 'up', '--local']);
+  run('supabase', [
+    'test',
+    'db',
+    'supabase/upgrade-tests/message_notification_delivery_upgrade.sql',
+  ]);
   run('supabase', ['db', 'reset']);
   run('supabase', ['test', 'db']);
 } finally {

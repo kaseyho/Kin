@@ -67,7 +67,7 @@ export interface Database {
         completed_at: string | null;
       }>;
       operator_maintenance_status: Table<{
-        worker: 'storage-cleanup';
+        worker: 'storage-cleanup' | 'message-notifications';
         last_started_at: string | null;
         last_succeeded_at: string | null;
         last_status: 'never' | 'running' | 'succeeded' | 'incomplete';
@@ -91,12 +91,18 @@ export interface Database {
         message_id: string;
         space_id: string;
         recipient_id: string;
+        installation_id: string;
         status: 'pending' | 'processing' | 'ticketed' | 'delivered' | 'failed';
         attempts: number;
         next_attempt_at: string;
         processing_started_at: string | null;
         processing_token: string | null;
         expo_ticket_id: string | null;
+        ticketed_at: string | null;
+        receipt_attempts: number;
+        receipt_next_attempt_at: string | null;
+        receipt_processing_started_at: string | null;
+        receipt_processing_token: string | null;
         last_error_code: string;
         created_at: string;
         updated_at: string;
@@ -222,8 +228,22 @@ export interface Database {
           message_id: string;
           space_id: string;
           recipient_id: string;
+          installation_id: string;
           attempts: number;
           processing_token: string;
+        }[];
+      };
+      get_message_notification_payload: {
+        Args: { target_job_id: string; target_processing_token: string };
+        Returns: {
+          job_id: string;
+          expo_push_token: string;
+          installation_id: string;
+          space_id: string;
+          message_kind: MessageRow['kind'];
+          message_body: string;
+          sender_name: string;
+          previews_enabled: boolean;
         }[];
       };
       complete_message_notification_job: {
@@ -233,6 +253,18 @@ export interface Database {
           target_expo_ticket_id: string;
         };
         Returns: boolean;
+      };
+      claim_message_notification_receipts: {
+        Args: { maximum_receipts?: number };
+        Returns: {
+          id: string;
+          installation_id: string;
+          attempts: number;
+          receipt_attempts: number;
+          receipt_processing_token: string;
+          expo_ticket_id: string;
+          ticketed_at: string;
+        }[];
       };
       fail_message_notification_job: {
         Args: {
@@ -247,8 +279,37 @@ export interface Database {
         Args: {
           target_job_id: string;
           target_expo_ticket_id: string;
+          target_receipt_processing_token: string;
           target_delivered: boolean;
           target_error_code?: string;
+        };
+        Returns: boolean;
+      };
+      retry_message_notification_receipt: {
+        Args: {
+          target_job_id: string;
+          target_expo_ticket_id: string;
+          target_receipt_processing_token: string;
+          target_error_code: string;
+          target_next_attempt_at: string;
+        };
+        Returns: boolean;
+      };
+      defer_message_notification_receipt: {
+        Args: {
+          target_job_id: string;
+          target_expo_ticket_id: string;
+          target_receipt_processing_token: string;
+          target_error_code: string;
+          target_next_attempt_at: string;
+        };
+        Returns: boolean;
+      };
+      record_message_notification_heartbeat: {
+        Args: {
+          target_status: 'running' | 'succeeded' | 'incomplete';
+          target_claimed: number;
+          target_failed: number;
         };
         Returns: boolean;
       };

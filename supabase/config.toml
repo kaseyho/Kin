@@ -296,6 +296,9 @@ verify_jwt = false
 [functions.process-storage-cleanup]
 verify_jwt = false
 
+[functions.send-message-notifications]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
