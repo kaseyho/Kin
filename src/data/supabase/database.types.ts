@@ -108,6 +108,37 @@ export interface Database {
         updated_at: string;
         completed_at: string | null;
       }>;
+      billing_entitlements: Table<{
+        user_id: string;
+        entitlement_id: 'kin_plus';
+        is_active: boolean;
+        expires_at: string | null;
+        product_id: string | null;
+        store:
+          | 'amazon'
+          | 'app_store'
+          | 'mac_app_store'
+          | 'paddle'
+          | 'play_store'
+          | 'promotional'
+          | 'rc_billing'
+          | 'roku'
+          | 'stripe'
+          | 'test_store'
+          | 'unknown';
+        environment: 'production' | 'sandbox';
+        last_event_id: string;
+        last_event_created_at: string;
+        synced_at: string;
+      }>;
+      revenuecat_webhook_events: Table<{
+        event_id: string;
+        event_type: string;
+        user_id: string;
+        environment: 'production' | 'sandbox';
+        provider_created_at: string;
+        processed_at: string;
+      }>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -312,6 +343,40 @@ export interface Database {
           target_failed: number;
         };
         Returns: boolean;
+      };
+      sync_revenuecat_entitlement: {
+        Args: {
+          target_event_id: string;
+          target_event_type: string;
+          target_user_id: string;
+          target_entitlement_id: 'kin_plus';
+          target_is_active: boolean;
+          target_expires_at: string | null;
+          target_product_id: string | null;
+          target_store: Database['public']['Tables']['billing_entitlements']['Row']['store'];
+          target_environment: Database['public']['Tables']['billing_entitlements']['Row']['environment'];
+          target_event_created_at: string;
+        };
+        Returns: boolean;
+      };
+      has_active_kin_plus: {
+        Args: { target_user_id: string };
+        Returns: boolean;
+      };
+      create_memory_item: {
+        Args: {
+          client_memory_id: string;
+          target_space_id: string;
+          memory_kind: MemoryRow['kind'];
+          memory_visibility: MemoryRow['visibility'];
+          memory_title: string;
+          memory_occurred_on: string;
+          memory_note: string;
+          memory_place: string | null;
+          source_message_ids: string[];
+          memory_media_uris: string[];
+        };
+        Returns: MemoryRow;
       };
     };
     Enums: Record<string, never>;

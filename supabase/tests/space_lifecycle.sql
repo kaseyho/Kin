@@ -405,28 +405,30 @@ select public.send_kin_message(
   'Shared history remains available',
   null
 );
-insert into public.memory_items (
-  id, space_id, created_by, kind, visibility, title, occurred_on
-)
-values
-  (
-    '41000000-0000-0000-0000-000000000001',
-    (select value::uuid from space_test_state where label = 'leave_space'),
-    auth.uid(),
-    'moment',
-    'shared',
-    'Shared memory',
-    current_date
-  ),
-  (
-    '41000000-0000-0000-0000-000000000002',
-    (select value::uuid from space_test_state where label = 'leave_space'),
-    auth.uid(),
-    'moment',
-    'private',
-    'Leaver private memory',
-    current_date
-  );
+select public.create_memory_item(
+  '41000000-0000-0000-0000-000000000001',
+  (select value::uuid from space_test_state where label = 'leave_space'),
+  'moment',
+  'shared',
+  'Shared memory',
+  current_date,
+  '',
+  null,
+  '{}'::uuid[],
+  '{}'::text[]
+);
+select public.create_memory_item(
+  '41000000-0000-0000-0000-000000000002',
+  (select value::uuid from space_test_state where label = 'leave_space'),
+  'moment',
+  'private',
+  'Leaver private memory',
+  current_date,
+  '',
+  null,
+  '{}'::uuid[],
+  '{}'::text[]
+);
 
 reset role;
 insert into public.space_invites (space_id, created_by, code)

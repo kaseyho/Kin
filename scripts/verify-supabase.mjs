@@ -50,12 +50,19 @@ try {
     '202609170002',
     '--sql-paths',
     'upgrade-tests/message_notification_delivery_seed.sql',
+    '--sql-paths',
+    'upgrade-tests/billing_entitlements_seed.sql',
   ]);
   run('supabase', ['migration', 'up', '--local']);
   run('supabase', [
     'test',
     'db',
     'supabase/upgrade-tests/message_notification_delivery_upgrade.sql',
+  ]);
+  run('supabase', [
+    'test',
+    'db',
+    'supabase/upgrade-tests/billing_entitlements_upgrade.sql',
   ]);
   run('supabase', ['db', 'reset']);
   run('supabase', ['test', 'db']);
