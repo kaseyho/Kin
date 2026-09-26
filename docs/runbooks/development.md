@@ -112,6 +112,27 @@ npm run test:database
 
 Playwright owns port 8081 and deliberately refuses to reuse a running server. Stop another local Expo process on that port before starting E2E.
 
+## Public hackathon demo deployment
+
+The public Vercel project `kin-demo` intentionally builds the credential-free demo profile. It is
+separate from the future connected production web deployment. The checked-in configuration builds
+on Vercel so Expo's generated font assets are retained and rewrites client-side routes to the SPA
+entry point:
+
+```bash
+vercel deploy . --prod --yes --project kin-demo -A vercel.demo.json
+```
+
+After deployment, verify the stable alias and a direct nested route in a clean browser:
+
+```text
+https://kin-demo-five.vercel.app/?demo=story&demoDate=2026-12-05
+https://kin-demo-five.vercel.app/space/space-maya-jamie?demoDate=2026-12-05
+```
+
+The demo Vercel configuration must not be reused for the connected production site because its
+build command deliberately forces `EXPO_PUBLIC_KIN_ENVIRONMENT=demo`.
+
 ## Generated files
 
 Expo generates `expo-env.d.ts`; it is intentionally ignored. `.expo/`, `dist/`, Playwright reports, test results, and `output/` are also ignored. Running verification should not leave tracked generated-file changes.

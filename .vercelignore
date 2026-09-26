@@ -1,0 +1,15 @@
+.env*
+/.expo/
+/.playwright-cli/
+/.superpowers/
+/coverage/
+/dist/
+/docs/
+/e2e/
+/node_modules/
+/output/
+/playwright-report/
+/supabase/
+/test-results/
+/tests/
+*.log

@@ -34,6 +34,11 @@ To exercise the defining demo loop:
 
 The optional `demoDate=YYYY-MM-DD` parameter pins date-sensitive resurfacing for reproducible demos. Invalid or impossible calendar dates are ignored. Demo data is reset only through an explicit demo action; unreadable local data is never silently overwritten.
 
+The credential-free public demo is deployed at
+[kin-demo-five.vercel.app](https://kin-demo-five.vercel.app/?demo=story&demoDate=2026-12-05).
+It is visibly demo-only: purchases are simulated and no private consumer account or production
+provider data is used.
+
 ## Verification
 
 ```bash
