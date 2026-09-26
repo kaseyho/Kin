@@ -81,6 +81,7 @@ export interface UpdateSpacePreferencesInput {
 }
 
 export interface SaveMemoryInput {
+  clientMemoryId: Id;
   spaceId: Id;
   kind: MemoryKind;
   visibility?: MemoryVisibility;
@@ -90,6 +91,7 @@ export interface SaveMemoryInput {
   place?: string;
   sourceMessageIds: Id[];
   mediaUris?: string[];
+  isKinPlusHint?: boolean;
 }
 
 export interface UpdateMemoryInput {

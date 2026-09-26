@@ -1,4 +1,5 @@
 import { createMemoryItem } from '@/domain/commands';
+import { FREE_MEMORY_LIMIT } from '@/domain/limits';
 import {
   isContentReportCategory,
   type ContentReportCategory,
@@ -576,12 +577,36 @@ class DemoKinRepository implements KinRepository {
     const snapshot = await this.current();
     const currentProfile = this.requireCurrentProfile(snapshot);
     this.requireMembership(snapshot, input.spaceId, currentProfile.id);
+    const sourceMessageIds = [...new Set(input.sourceMessageIds)].sort();
+    if (sourceMessageIds.some((messageId) =>
+      !snapshot.messages.some((message) => message.id === messageId && message.spaceId === input.spaceId))) {
+      throw new RepositoryError('save_failed', 'Kin could not keep that source message.', 'reenter');
+    }
     const memory = createMemoryItem({
       ...input,
-      id: this.makeUniqueId('memory', snapshot),
+      id: input.clientMemoryId,
       createdBy: currentProfile.id,
+      sourceMessageIds,
       now: this.now(),
     });
+    const existing = snapshot.memories.find((item) => item.id === input.clientMemoryId);
+    if (existing) {
+      if (sameMemoryDraft(existing, memory)) return clone(existing);
+      throw new RepositoryError(
+        'save_failed',
+        'Kin could not keep that memory because this draft ID was already used.',
+        'reenter',
+      );
+    }
+    const ownedCount = snapshot.memories.filter(
+      (item) => item.spaceId === input.spaceId && item.createdBy === currentProfile.id,
+    ).length;
+    if (!input.isKinPlusHint && ownedCount >= FREE_MEMORY_LIMIT) {
+      throw new RepositoryError(
+        'memory_limit',
+        'Kin+ unlocks unlimited new Moments.',
+      );
+    }
     const next = clone(snapshot);
     next.memories.push(memory);
     await this.commit(next);
@@ -812,6 +837,19 @@ class DemoKinRepository implements KinRepository {
     if (!memory) throw new RepositoryError('not_found', 'That memory could not be found.');
     return memory;
   }
+}
+
+function sameMemoryDraft(left: MemoryItem, right: MemoryItem): boolean {
+  return left.spaceId === right.spaceId
+    && left.createdBy === right.createdBy
+    && left.kind === right.kind
+    && left.visibility === right.visibility
+    && left.title === right.title
+    && left.occurredOn === right.occurredOn
+    && left.note === right.note
+    && left.place === right.place
+    && JSON.stringify(left.sourceMessageIds) === JSON.stringify(right.sourceMessageIds)
+    && JSON.stringify(left.mediaUris) === JSON.stringify(right.mediaUris);
 }
 
 function clone<T>(value: T): T {

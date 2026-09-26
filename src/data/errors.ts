@@ -11,6 +11,7 @@ export type RepositoryErrorCode =
   | 'invite_self'
   | 'invite_used'
   | 'load_failed'
+  | 'memory_limit'
   | 'message_invalid'
   | 'not_found'
   | 'profile_required'

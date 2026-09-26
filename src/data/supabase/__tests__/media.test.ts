@@ -4,6 +4,7 @@ import { MAX_MESSAGE_IMAGE_BYTES } from '@/services/media/contracts';
 import type { Database } from '../database.types';
 import {
   buildMediaObjectPath,
+  deleteUnreferencedMemoryMedia,
   readMediaStorageReference,
   toMediaStorageReference,
   uploadKinMedia,
@@ -74,5 +75,56 @@ describe('Supabase media references', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(upload).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
+  });
+
+  it('deletes a memory object only when no visible memory row references it', async () => {
+    const remove = jest.fn(async () => ({ data: [], error: null }));
+    const maybeSingle = jest
+      .fn()
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: { id: 'memory-1' }, error: null });
+    const query = {
+      contains: jest.fn(),
+      limit: jest.fn(),
+      maybeSingle,
+      select: jest.fn(),
+    } as Record<string, jest.Mock>;
+    query.select.mockReturnValue(query);
+    query.contains.mockReturnValue(query);
+    query.limit.mockReturnValue(query);
+    const client = {
+      from: jest.fn(() => query),
+      storage: { from: jest.fn(() => ({ remove })) },
+    } as unknown as SupabaseClient<Database>;
+    const reference = toMediaStorageReference('space-id/user-id/memory-id.jpg');
+
+    await expect(deleteUnreferencedMemoryMedia(client, reference)).resolves.toBe(true);
+    await expect(deleteUnreferencedMemoryMedia(client, reference)).resolves.toBe(false);
+
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalledWith(['space-id/user-id/memory-id.jpg']);
+  });
+
+  it('keeps a memory object when the reference check itself fails', async () => {
+    const remove = jest.fn();
+    const query = {
+      contains: jest.fn(),
+      limit: jest.fn(),
+      maybeSingle: jest.fn(async () => ({ data: null, error: { message: 'offline' } })),
+      select: jest.fn(),
+    } as Record<string, jest.Mock>;
+    query.select.mockReturnValue(query);
+    query.contains.mockReturnValue(query);
+    query.limit.mockReturnValue(query);
+    const client = {
+      from: jest.fn(() => query),
+      storage: { from: jest.fn(() => ({ remove })) },
+    } as unknown as SupabaseClient<Database>;
+
+    await expect(deleteUnreferencedMemoryMedia(
+      client,
+      toMediaStorageReference('space-id/user-id/memory-id.jpg'),
+    )).resolves.toBe(false);
+    expect(remove).not.toHaveBeenCalled();
   });
 });

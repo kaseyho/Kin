@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { RepositoryError } from '@/data/errors';
 import { createSupabaseKinRepository } from '../SupabaseKinRepository';
 import type { Database } from '../database.types';
-import type { InviteRow, MessageRow } from '../mappers';
+import type { InviteRow, MemoryMessageRow, MemoryRow, MessageRow } from '../mappers';
 
 const USER_ID = '10000000-0000-0000-0000-000000000001';
 const PARTNER_ID = '10000000-0000-0000-0000-000000000002';
@@ -16,12 +16,18 @@ interface FakeClientOptions {
   messageRows?: MessageRow[];
   ambiguousSendOnce?: boolean;
   unreadCount?: number;
+  memoryRows?: MemoryRow[];
+  ambiguousMemoryOnce?: boolean;
+  ambiguousMemoryAlways?: boolean;
 }
 
 function createFakeClient(options: FakeClientOptions = {}) {
   let hasSpace = true;
   let ambiguousSendPending = options.ambiguousSendOnce ?? false;
+  let ambiguousMemoryPending = options.ambiguousMemoryOnce ?? false;
   const serverMessages = [...(options.messageRows ?? [])];
+  const serverMemories = [...(options.memoryRows ?? [])];
+  const serverMemoryLinks: MemoryMessageRow[] = [];
   const writes: { table: string; operation: string; payload?: unknown }[] = [];
   const realtimeHandlers: { table: string; callback: () => void }[] = [];
   const uploadedMediaPaths: string[] = [];
@@ -76,6 +82,8 @@ function createFakeClient(options: FakeClientOptions = {}) {
       }];
     }
     if (table === 'messages') return serverMessages;
+    if (table === 'memory_items') return serverMemories;
+    if (table === 'memory_item_messages') return serverMemoryLinks;
     return [];
   };
 
@@ -88,6 +96,7 @@ function createFakeClient(options: FakeClientOptions = {}) {
         return query;
       }),
       eq: jest.fn(() => query),
+      contains: jest.fn(() => query),
       in: jest.fn(() => query),
       insert: jest.fn((payload: unknown) => {
         writes.push({ operation: 'insert', payload, table });
@@ -183,6 +192,35 @@ function createFakeClient(options: FakeClientOptions = {}) {
         error: null,
       };
     }
+    if (name === 'create_memory_item') {
+      const id = args?.client_memory_id as string;
+      let row = serverMemories.find((memory) => memory.id === id);
+      if (!row) {
+        row = {
+          created_at: '2026-09-23T02:00:00.000Z',
+          created_by: USER_ID,
+          id,
+          kind: args?.memory_kind as MemoryRow['kind'],
+          media_uris: args?.memory_media_uris as string[],
+          note: args?.memory_note as string,
+          occurred_on: args?.memory_occurred_on as string,
+          place: (args?.memory_place as string | null | undefined) ?? null,
+          space_id: args?.target_space_id as string,
+          title: args?.memory_title as string,
+          updated_at: '2026-09-23T02:00:00.000Z',
+          visibility: args?.memory_visibility as MemoryRow['visibility'],
+        };
+        serverMemories.push(row);
+        for (const messageId of args?.source_message_ids as string[]) {
+          serverMemoryLinks.push({ memory_id: id, message_id: messageId });
+        }
+      }
+      if (ambiguousMemoryPending || options.ambiguousMemoryAlways) {
+        ambiguousMemoryPending = false;
+        return { data: null, error: { message: 'connection closed after commit' } };
+      }
+      return { data: row, error: null };
+    }
     return { data: null, error: null };
   });
 
@@ -230,6 +268,8 @@ function createFakeClient(options: FakeClientOptions = {}) {
     rpc,
     removedMediaPaths,
     serverMessages,
+    serverMemories,
+    serverMemoryLinks,
     uploadedMediaPaths,
     writes,
   };
@@ -577,5 +617,129 @@ describe('SupabaseKinRepository production messaging', () => {
 
     expect(fake.rpc).toHaveBeenCalledWith('mark_space_read', { target_space_id: SPACE_ID });
     expect(emitted.at(-1)).toBe(0);
+  });
+});
+
+describe('SupabaseKinRepository production memories', () => {
+  const memoryInput = {
+    clientMemoryId: '40000000-0000-4000-8000-000000000001',
+    kind: 'moment' as const,
+    note: 'A durable note',
+    occurredOn: '2026-09-23',
+    place: 'Singapore',
+    sourceMessageIds: [MESSAGE_ID],
+    spaceId: SPACE_ID,
+    title: 'One durable memory',
+    visibility: 'private' as const,
+  };
+
+  it('creates a memory and its links through one actor-derived RPC with no table inserts', async () => {
+    const fake = createFakeClient({ messageRows: messageRows(1) });
+    const repository = createSupabaseKinRepository(fake.client);
+    await repository.load();
+
+    const memory = await repository.saveMemory(memoryInput);
+
+    expect(memory).toMatchObject({
+      createdBy: USER_ID,
+      id: memoryInput.clientMemoryId,
+      sourceMessageIds: [MESSAGE_ID],
+    });
+    expect(fake.rpc).toHaveBeenCalledWith('create_memory_item', {
+      client_memory_id: memoryInput.clientMemoryId,
+      memory_kind: 'moment',
+      memory_media_uris: [],
+      memory_note: 'A durable note',
+      memory_occurred_on: '2026-09-23',
+      memory_place: 'Singapore',
+      memory_title: 'One durable memory',
+      memory_visibility: 'private',
+      source_message_ids: [MESSAGE_ID],
+      target_space_id: SPACE_ID,
+    });
+    expect(fake.writes.filter((write) =>
+      write.operation === 'insert'
+      && ['memory_items', 'memory_item_messages'].includes(write.table))).toEqual([]);
+  });
+
+  it('retries one ambiguous response with the same UUID and returns one memory and link', async () => {
+    const fake = createFakeClient({ ambiguousMemoryOnce: true, messageRows: messageRows(1) });
+    const repository = createSupabaseKinRepository(fake.client);
+    await repository.load();
+
+    const memory = await repository.saveMemory(memoryInput);
+
+    const calls = fake.rpc.mock.calls.filter(([name]) => name === 'create_memory_item');
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.[1]).toEqual(calls[1]?.[1]);
+    expect(memory.id).toBe(memoryInput.clientMemoryId);
+    expect(fake.serverMemories.filter((item) => item.id === memory.id)).toHaveLength(1);
+    expect(fake.serverMemoryLinks.filter((item) => item.memory_id === memory.id)).toHaveLength(1);
+  });
+
+  it('maps the server free limit to stable product copy without leaking provider details', async () => {
+    const fake = createFakeClient({
+      rpcErrors: {
+        create_memory_item: {
+          details: 'private database details',
+          message: 'KIN_MEMORY_LIMIT_REACHED',
+        },
+      },
+    });
+    const repository = createSupabaseKinRepository(fake.client);
+    await repository.load();
+
+    await expect(repository.saveMemory(memoryInput)).rejects.toMatchObject({
+      code: 'memory_limit',
+      message: 'Kin+ unlocks unlimited new Moments.',
+    });
+  });
+
+  it('removes a newly uploaded unreferenced object after a deterministic server rejection', async () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      arrayBuffer: async () => new ArrayBuffer(4),
+      ok: true,
+    } as Response);
+    const fake = createFakeClient({
+      rpcErrors: { create_memory_item: { message: 'KIN_MEMORY_LIMIT_REACHED' } },
+    });
+    const repository = createSupabaseKinRepository(fake.client);
+    await repository.load();
+
+    await expect(repository.saveMemory({
+      ...memoryInput,
+      mediaUris: ['https://images.kin.test/memory.jpg'],
+    })).rejects.toMatchObject({ code: 'memory_limit' });
+
+    expect(fake.uploadedMediaPaths).toEqual([
+      `${SPACE_ID}/${USER_ID}/${memoryInput.clientMemoryId}-0.jpg`,
+    ]);
+    expect(fake.removedMediaPaths).toEqual([
+      `${SPACE_ID}/${USER_ID}/${memoryInput.clientMemoryId}-0.jpg`,
+    ]);
+    fetchSpy.mockRestore();
+  });
+
+  it('keeps uploaded media after repeated ambiguous responses because the row may exist', async () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue({
+      arrayBuffer: async () => new ArrayBuffer(4),
+      ok: true,
+    } as Response);
+    const fake = createFakeClient({ ambiguousMemoryAlways: true });
+    const repository = createSupabaseKinRepository(fake.client);
+    await repository.load();
+
+    await expect(repository.saveMemory({
+      ...memoryInput,
+      mediaUris: ['https://images.kin.test/memory.jpg'],
+    })).rejects.toMatchObject({
+      code: 'save_failed',
+      message: 'Kin could not keep that yet.',
+    });
+
+    expect(fake.rpc.mock.calls.filter(([name]) => name === 'create_memory_item')).toHaveLength(2);
+    expect(fake.serverMemories).toHaveLength(1);
+    expect(fake.removedMediaPaths).toEqual([]);
+    fetchSpy.mockRestore();
   });
 });

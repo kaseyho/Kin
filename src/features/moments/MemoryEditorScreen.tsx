@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenState } from '@/components/ScreenState';
+import { RepositoryError } from '@/data/errors';
 import { kinImageSource } from '@/design/assets';
 import { colors, radii, spacing, typography } from '@/design/tokens';
 import { canCreateMemory } from '@/domain/limits';
+import { createUuid } from '@/domain/ids';
 import type { MemoryItem, MemoryKind, MemoryVisibility, Message } from '@/domain/models';
 import { useKin } from '@/state/useKin';
 import { usePremiumGate } from '@/features/premium/usePremiumGate';
@@ -27,7 +29,11 @@ export function MemoryEditorScreen(props: MemoryEditorScreenProps) {
   const spaceExists = kin.snapshot?.spaces.some((space) => space.id === props.spaceId);
   if (kin.status === 'loading') return <ScreenState message="Opening the source message…" title="Remember this" />;
   if (!source || !spaceExists) return <ScreenState message="The source message is not available." title="Cannot remember this" />;
-  return <MemoryEditorContent {...props} isKinPlus={props.isKinPlus ?? premium.entitlement.isKinPlus} source={source} save={kin.saveMemory} existingCount={kin.snapshot?.memories.filter((memory) => memory.spaceId === props.spaceId).length ?? 0} />;
+  const currentUserId = kin.snapshot?.currentUserId;
+  const existingCount = kin.snapshot?.memories.filter(
+    (memory) => memory.spaceId === props.spaceId && memory.createdBy === currentUserId,
+  ).length ?? 0;
+  return <MemoryEditorContent {...props} isKinPlus={props.isKinPlus ?? premium.entitlement.isKinPlus} source={source} save={kin.saveMemory} existingCount={existingCount} />;
 }
 
 function MemoryEditorContent({
@@ -54,16 +60,22 @@ function MemoryEditorContent({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<MemoryItem | null>(null);
+  const [clientMemoryId] = useState(createUuid);
+  const saveInFlight = useRef(false);
 
   async function submit() {
+    if (saveInFlight.current) return;
     if (!canCreateMemory({ isKinPlus }, existingCount)) {
       onRequestKinPlus();
       return;
     }
+    saveInFlight.current = true;
     setSaving(true);
     setError('');
     try {
       const memory = await save({
+        clientMemoryId,
+        isKinPlusHint: isKinPlus,
         kind,
         mediaUris: source.mediaUri ? [source.mediaUri] : [],
         note,
@@ -77,8 +89,13 @@ function MemoryEditorContent({
       setSaved(memory);
       onSaved(memory);
     } catch (reason) {
+      if (reason instanceof RepositoryError && reason.code === 'memory_limit') {
+        onRequestKinPlus();
+        return;
+      }
       setError(reason instanceof Error ? reason.message : 'Kin could not keep this yet.');
     } finally {
+      saveInFlight.current = false;
       setSaving(false);
     }
   }

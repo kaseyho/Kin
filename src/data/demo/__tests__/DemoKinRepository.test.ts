@@ -91,6 +91,7 @@ describe('DemoKinRepository', () => {
     expect(reacted.reactions).toHaveLength(1);
 
     const memory = await repository.saveMemory({
+      clientMemoryId: 'memory-dinner-plans',
       spaceId: space.id,
       kind: 'moment',
       title: 'Dinner plans',
@@ -108,6 +109,57 @@ describe('DemoKinRepository', () => {
 
     await repository.deleteMemory(memory.id);
     expect((await repository.load()).memories).toHaveLength(0);
+  });
+
+  it('replays the same memory UUID once and rejects a changed payload', async () => {
+    const repository = createRepository();
+    await repository.resetDemo();
+    const input = {
+      clientMemoryId: 'memory-idempotent',
+      kind: 'moment' as const,
+      occurredOn: '2026-09-13',
+      sourceMessageIds: ['message-3'],
+      spaceId: 'space-maya-jamie',
+      title: 'One local memory',
+    };
+
+    const first = await repository.saveMemory(input);
+    const replay = await repository.saveMemory(input);
+
+    expect(replay).toEqual(first);
+    expect((await repository.load()).memories.filter((memory) => memory.id === input.clientMemoryId)).toHaveLength(1);
+    await expect(repository.saveMemory({ ...input, title: 'Changed payload' })).rejects.toMatchObject({
+      code: 'save_failed',
+      message: 'Kin could not keep that memory because this draft ID was already used.',
+    });
+  });
+
+  it('enforces five owned free memories per Space but accepts a local demo Kin+ hint', async () => {
+    const repository = createRepository();
+    await repository.resetDemo();
+    for (let index = 3; index <= 5; index += 1) {
+      await repository.saveMemory({
+        clientMemoryId: `memory-free-${index}`,
+        kind: 'moment',
+        occurredOn: '2026-09-13',
+        sourceMessageIds: [],
+        spaceId: 'space-maya-jamie',
+        title: `Free memory ${index}`,
+      });
+    }
+
+    const sixth = {
+      clientMemoryId: 'memory-sixth',
+      kind: 'moment' as const,
+      occurredOn: '2026-09-13',
+      sourceMessageIds: [],
+      spaceId: 'space-maya-jamie',
+      title: 'Sixth memory',
+    };
+    await expect(repository.saveMemory(sixth)).rejects.toMatchObject({ code: 'memory_limit' });
+    await expect(repository.saveMemory({ ...sixth, isKinPlusHint: true })).resolves.toMatchObject({
+      id: sixth.clientMemoryId,
+    });
   });
 
   it('refreshes a persisted invitation status when it expires', async () => {

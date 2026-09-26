@@ -9,6 +9,7 @@ describe('relationship memories', () => {
     const repository = createTestRepository();
     await repository.resetDemo();
     await repository.saveMemory({
+      clientMemoryId: 'memory-important-date-test',
       kind: 'important_date',
       occurredOn: '2024-04-18',
       sourceMessageIds: [],
@@ -26,7 +27,7 @@ describe('relationship memories', () => {
       .map((child) => child.props.testID)
       .filter((value): value is string => typeof value === 'string' && value.startsWith('timeline-item-'));
     expect(orderedIds).toEqual([
-      'timeline-item-memory-1',
+      'timeline-item-memory-important-date-test',
       'timeline-item-memory-lanterns',
       'timeline-item-plan-museum',
     ]);

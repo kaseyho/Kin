@@ -85,6 +85,24 @@ export async function deleteKinMedia(
   if (result.error) throw result.error;
 }
 
+export async function deleteUnreferencedMemoryMedia(
+  client: SupabaseClient<Database>,
+  uri: string,
+): Promise<boolean> {
+  const path = readMediaStorageReference(uri);
+  if (!path) return false;
+  const reference = toMediaStorageReference(path);
+  const referenced = await client
+    .from('memory_items')
+    .select('id')
+    .contains('media_uris', [reference])
+    .limit(1)
+    .maybeSingle();
+  if (referenced.error || referenced.data) return false;
+  await deleteKinMedia(client, reference);
+  return true;
+}
+
 async function readMediaBytes(uri: string): Promise<ArrayBuffer> {
   if (uri.startsWith('file:') || uri.startsWith('content:')) {
     const { File } = await import('expo-file-system');

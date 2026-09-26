@@ -1,6 +1,7 @@
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 
 import { createMemoryItem } from '@/domain/commands';
+import { createUuid } from '@/domain/ids';
 import {
   isContentReportCategory,
   type ContentReportReceipt,
@@ -32,7 +33,13 @@ import type {
 } from '../contracts';
 import { RepositoryError, type RepositoryErrorCode } from '../errors';
 import type { Database } from './database.types';
-import { deleteKinMedia, resolveKinMedia, uploadKinMedia } from './media';
+import {
+  deleteKinMedia,
+  deleteUnreferencedMemoryMedia,
+  readMediaStorageReference,
+  resolveKinMedia,
+  uploadKinMedia,
+} from './media';
 import { requireAuthenticatedUserId } from './requireAuthenticatedUser';
 import {
   mapMember,
@@ -64,6 +71,7 @@ class SupabaseKinRepository implements KinRepository {
   private realtimeSpaceKey = '';
   private refreshing = false;
   private readonly messageMediaReferences = new Map<Id, string>();
+  private readonly memoryMediaReferences = new Map<Id, string[]>();
 
   constructor(private readonly client: SupabaseClient<Database>) {}
 
@@ -139,6 +147,13 @@ class SupabaseKinRepository implements KinRepository {
     }
     const storedMessageRows = [...newestRowsBySpace.values()].flat();
     const storedMemoryRows = (memoriesResult.data ?? []) as MemoryRow[];
+    const storedMemoryIds = new Set(storedMemoryRows.map((row) => row.id));
+    for (const memoryId of this.memoryMediaReferences.keys()) {
+      if (!storedMemoryIds.has(memoryId)) this.memoryMediaReferences.delete(memoryId);
+    }
+    for (const row of storedMemoryRows) {
+      this.memoryMediaReferences.set(row.id, [...row.media_uris]);
+    }
     const invites = (invitesResult.data ?? []) as InviteRow[];
     const profileIds = [...new Set(members.map((item) => item.user_id))];
     const messageIds = storedMessageRows.map((item) => item.id);
@@ -383,7 +398,7 @@ class SupabaseKinRepository implements KinRepository {
       body,
       createdAt: new Date().toISOString(),
       deliveryState: 'sending',
-      id: randomUuid(),
+      id: createUuid(),
       kind: input.kind,
       ...(input.mediaUri ? { mediaUri: input.mediaUri } : {}),
       reactions: [],
@@ -581,35 +596,79 @@ class SupabaseKinRepository implements KinRepository {
   async saveMemory(input: SaveMemoryInput): Promise<MemoryItem> {
     const createdBy = await this.ensureUserId();
     const now = new Date().toISOString();
-    const memory = createMemoryItem({ ...input, createdBy, id: randomUuid(), now });
-    let storedMediaUris: string[];
+    const memory = createMemoryItem({
+      ...input,
+      createdBy,
+      id: input.clientMemoryId,
+      sourceMessageIds: [...new Set(input.sourceMessageIds)].sort(),
+      now,
+    });
+    const storedMediaUris: string[] = [];
+    const newlyUploadedUris: string[] = [];
     try {
-      storedMediaUris = await Promise.all(memory.mediaUris.map((sourceUri, index) =>
-        uploadKinMedia(this.client, {
+      for (const [index, sourceUri] of memory.mediaUris.entries()) {
+        const wasStored = Boolean(readMediaStorageReference(sourceUri));
+        const storedUri = await uploadKinMedia(this.client, {
           mediaId: `${memory.id}-${index}`,
           sourceUri,
           spaceId: memory.spaceId,
           userId: createdBy,
-        })));
+        });
+        storedMediaUris.push(storedUri);
+        if (!wasStored) newlyUploadedUris.push(storedUri);
+      }
     } catch {
+      await cleanupMemoryUploads(this.client, newlyUploadedUris);
       throw new RepositoryError('save_failed', 'Kin could not upload that memory.', 'retry');
     }
-    const result = await this.client.from('memory_items').insert({
-      ...toMemoryRow(memory),
-      media_uris: storedMediaUris,
-    });
-    assertResult(result.error, 'save_failed', 'Kin could not keep that yet.', 'retry');
-    if (memory.sourceMessageIds.length) {
-      const linkResult = await this.client.from('memory_item_messages').insert(
-        memory.sourceMessageIds.map((messageId) => ({ memory_id: memory.id, message_id: messageId })),
-      );
-      if (linkResult.error) {
-        await this.client.from('memory_items').delete().eq('id', memory.id);
-        throw new RepositoryError('save_failed', 'Kin could not keep the source with that item.', 'retry');
+
+    const rpcArgs: Database['public']['Functions']['create_memory_item']['Args'] = {
+      client_memory_id: memory.id,
+      memory_kind: memory.kind,
+      memory_media_uris: storedMediaUris,
+      memory_note: memory.note,
+      memory_occurred_on: memory.occurredOn,
+      memory_place: memory.place ?? null,
+      memory_title: memory.title,
+      memory_visibility: memory.visibility,
+      source_message_ids: memory.sourceMessageIds,
+      target_space_id: memory.spaceId,
+    };
+    let result = await this.client.rpc('create_memory_item', rpcArgs);
+    if (result.error || !result.data) {
+      if (isDeterministicMemoryError(result.error)) {
+        await cleanupMemoryUploads(this.client, newlyUploadedUris);
+        throw mapMemoryCreateError(result.error);
+      }
+      result = await this.client.rpc('create_memory_item', rpcArgs);
+      if (result.error || !result.data) {
+        if (isDeterministicMemoryError(result.error)) {
+          await cleanupMemoryUploads(this.client, newlyUploadedUris);
+          throw mapMemoryCreateError(result.error);
+        }
+        throw new RepositoryError('save_failed', 'Kin could not keep that yet.', 'retry');
       }
     }
-    await this.refreshAndEmit();
-    return memory;
+    this.memoryMediaReferences.set(memory.id, storedMediaUris);
+    const row = firstRow(result.data as MemoryRow | MemoryRow[]);
+    try {
+      const snapshot = await this.refreshAndEmit();
+      return requireEntity(
+        snapshot.memories.find((item) => item.id === memory.id),
+        'Kin kept that memory, but could not open it yet.',
+      );
+    } catch {
+      let visibleMediaUris = [...memory.mediaUris];
+      try {
+        visibleMediaUris = await Promise.all(storedMediaUris.map((uri) => resolveKinMedia(this.client, uri)));
+      } catch {
+        // The original local URIs remain usable for the immediate success state.
+      }
+      return mapMemory(
+        { ...row, media_uris: visibleMediaUris },
+        memory.sourceMessageIds.map((messageId) => ({ memory_id: memory.id, message_id: messageId })),
+      );
+    }
   }
 
   async updateMemory(input: UpdateMemoryInput): Promise<MemoryItem> {
@@ -747,23 +806,6 @@ class SupabaseKinRepository implements KinRepository {
   }
 }
 
-function toMemoryRow(memory: MemoryItem) {
-  return {
-    created_at: memory.createdAt,
-    created_by: memory.createdBy,
-    id: memory.id,
-    kind: memory.kind,
-    media_uris: memory.mediaUris,
-    note: memory.note,
-    occurred_on: memory.occurredOn,
-    place: memory.place ?? null,
-    space_id: memory.spaceId,
-    title: memory.title,
-    updated_at: memory.updatedAt,
-    visibility: memory.visibility,
-  };
-}
-
 function pageStateForRows(
   rows: readonly MessageRow[],
   hasOlderMessages: boolean,
@@ -871,13 +913,40 @@ const LIFECYCLE_ERRORS: readonly [
   ['KIN_AUTH_REQUIRED', 'auth_required', 'Sign in to continue.', 'reconnect'],
 ];
 
-function randomUuid(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
-    const random = Math.floor(Math.random() * 16);
-    const value = character === 'x' ? random : (random & 0x3) | 0x8;
-    return value.toString(16);
-  });
+function isDeterministicMemoryError(error: unknown): boolean {
+  const text = lifecycleErrorText(error);
+  return [
+    'KIN_MEMORY_LIMIT_REACHED',
+    'KIN_MEMORY_IDEMPOTENCY_CONFLICT',
+    'KIN_MEMORY_INVALID',
+    'KIN_SPACE_UNAVAILABLE',
+    'KIN_AUTH_REQUIRED',
+  ].some((machineCode) => text.includes(machineCode));
+}
+
+function mapMemoryCreateError(error: unknown): RepositoryError {
+  const text = lifecycleErrorText(error);
+  if (text.includes('KIN_MEMORY_LIMIT_REACHED')) {
+    return new RepositoryError('memory_limit', 'Kin+ unlocks unlimited new Moments.');
+  }
+  if (text.includes('KIN_MEMORY_IDEMPOTENCY_CONFLICT')) {
+    return new RepositoryError(
+      'save_failed',
+      'Kin could not keep that memory because this draft ID was already used.',
+      'reenter',
+    );
+  }
+  if (text.includes('KIN_MEMORY_INVALID')) {
+    return new RepositoryError('save_failed', 'Check this memory and try again.', 'reenter');
+  }
+  return mapLifecycleError(error, 'save_failed', 'Kin could not keep that yet.', 'retry');
+}
+
+async function cleanupMemoryUploads(
+  client: SupabaseClient<Database>,
+  uris: readonly string[],
+): Promise<void> {
+  await Promise.allSettled(uris.map((uri) => deleteUnreferencedMemoryMedia(client, uri)));
 }
 
 function clone<T>(value: T): T {
