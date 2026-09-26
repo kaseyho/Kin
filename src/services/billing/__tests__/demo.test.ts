@@ -59,6 +59,17 @@ it('keeps connected billing unavailable instead of granting a demo entitlement',
   await expect(service.purchase('monthly')).rejects.toMatchObject({ code: 'unavailable' });
 });
 
+it('keeps preview billing unavailable instead of granting a demo entitlement', async () => {
+  const service = createPremiumService({
+    deployment: 'preview',
+    platform: 'android',
+    values: {},
+  });
+
+  expect(await service.getEntitlement()).toEqual({ isKinPlus: false, source: 'unavailable' });
+  expect(await service.getOffering()).toBeNull();
+});
+
 it('fails closed when production billing lacks its platform key', () => {
   expect(() => createPremiumService({
     deployment: 'production',
@@ -79,4 +90,17 @@ it('uses the configured public key for the current connected platform', () => {
   );
 
   expect(service).toBe(revenueCat);
+});
+
+it('rejects a Test Store or wrong-platform key in production', () => {
+  expect(() => createPremiumService({
+    deployment: 'production',
+    platform: 'ios',
+    values: { EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: 'test_store_fixture' },
+  })).toThrow('production public key');
+  expect(() => createPremiumService({
+    deployment: 'production',
+    platform: 'web',
+    values: { EXPO_PUBLIC_REVENUECAT_WEB_API_KEY: 'appl_wrong_platform' },
+  })).toThrow('production public key');
 });

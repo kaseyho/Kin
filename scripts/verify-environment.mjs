@@ -14,12 +14,17 @@ assert.equal(demo.extra?.kinSupportEmail, 'support@kin.invalid');
 assert.equal(demo.ios?.associatedDomains, undefined);
 assert.equal(demo.android?.intentFilters, undefined);
 
-const production = readExpoConfig({
+const productionValues = {
   EXPO_PUBLIC_KIN_ENVIRONMENT: 'production',
   EXPO_PUBLIC_KIN_PUBLIC_URL: 'https://kin-fixture.example/app/',
   EXPO_PUBLIC_KIN_SUPPORT_EMAIL: 'support@kin-fixture.com',
   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_fixture',
   EXPO_PUBLIC_SUPABASE_URL: 'https://kin-fixture.supabase.co',
+};
+const production = readExpoConfig({
+  ...productionValues,
+  EAS_BUILD_PLATFORM: 'ios',
+  EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: 'appl_config_fixture',
 });
 assertReleaseShape(production);
 assert.equal(production.extra?.kinEnvironment, 'production');
@@ -31,6 +36,35 @@ assert.deepEqual(production.android?.intentFilters?.[0]?.data, [{
   pathPrefix: '/app/invite',
   scheme: 'https',
 }]);
+assert.ok(!JSON.stringify(production).includes('appl_config_fixture'));
+
+readExpoConfig({
+  ...productionValues,
+  EAS_BUILD_PLATFORM: 'android',
+  EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: 'goog_config_fixture',
+});
+readExpoConfig({
+  ...productionValues,
+  EAS_BUILD_PLATFORM: 'ios',
+  EXPO_PUBLIC_KIN_ENVIRONMENT: 'preview',
+});
+
+assertExpoConfigFails({
+  ...productionValues,
+  EAS_BUILD_PLATFORM: 'ios',
+}, /RevenueCat ios public key/, 'Expo config accepted an iOS production build without billing.');
+
+assertExpoConfigFails({
+  ...productionValues,
+  EAS_BUILD_PLATFORM: 'android',
+  EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: 'test_test_store_fixture',
+}, /production public key/, 'Expo config accepted a Test Store key in production.');
+
+assertExpoConfigFails({
+  ...productionValues,
+  EAS_BUILD_PLATFORM: 'ios',
+  EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: 'goog_wrong_platform_fixture',
+}, /production public key/, 'Expo config accepted a wrong-platform RevenueCat key.');
 
 assertExpoConfigFails({
   EXPO_PUBLIC_KIN_ENVIRONMENT: 'production',
@@ -82,8 +116,12 @@ function runExpoConfig(overrides) {
         EXPO_PUBLIC_KIN_ENVIRONMENT: '',
         EXPO_PUBLIC_KIN_PUBLIC_URL: '',
         EXPO_PUBLIC_KIN_SUPPORT_EMAIL: '',
+        EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: '',
+        EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: '',
+        EXPO_PUBLIC_REVENUECAT_WEB_API_KEY: '',
         EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: '',
         EXPO_PUBLIC_SUPABASE_URL: '',
+        EAS_BUILD_PLATFORM: '',
         ...overrides,
       },
     },

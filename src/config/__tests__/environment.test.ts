@@ -2,6 +2,7 @@ import {
   ConfigurationError,
   readEnvironment,
   readPublicEnvironmentValues,
+  readRevenueCatPublicKey,
 } from '../environment';
 
 describe('readEnvironment', () => {
@@ -156,6 +157,48 @@ describe('readEnvironment', () => {
       })).toThrow('publishable key');
     },
   );
+});
+
+describe('readRevenueCatPublicKey', () => {
+  it('does not require provider credentials for demo', () => {
+    expect(readRevenueCatPublicKey({}, 'demo', 'web')).toBeNull();
+  });
+
+  it.each(['development', 'preview'] as const)(
+    'keeps missing %s billing explicitly unavailable',
+    (deployment) => {
+      expect(readRevenueCatPublicKey({}, deployment, 'ios')).toBeNull();
+      expect(readRevenueCatPublicKey({}, deployment, 'android')).toBeNull();
+      expect(readRevenueCatPublicKey({}, deployment, 'web')).toBeNull();
+    },
+  );
+
+  it.each([
+    ['ios', 'EXPO_PUBLIC_REVENUECAT_IOS_API_KEY', 'appl_public_fixture'],
+    ['android', 'EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY', 'goog_public_fixture'],
+    ['web', 'EXPO_PUBLIC_REVENUECAT_WEB_API_KEY', 'rcb_public_fixture'],
+  ] as const)('requires and accepts the production %s key', (platform, name, key) => {
+    expect(() => readRevenueCatPublicKey({}, 'production', platform))
+      .toThrow(`RevenueCat ${platform} public key`);
+    expect(readRevenueCatPublicKey({ [name]: key }, 'production', platform)).toBe(key);
+  });
+
+  it.each([
+    ['ios', 'EXPO_PUBLIC_REVENUECAT_IOS_API_KEY', 'goog_wrong_platform'],
+    ['android', 'EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY', 'appl_wrong_platform'],
+    ['web', 'EXPO_PUBLIC_REVENUECAT_WEB_API_KEY', 'appl_wrong_platform'],
+    ['web', 'EXPO_PUBLIC_REVENUECAT_WEB_API_KEY', 'test_test_store_key'],
+    ['web', 'EXPO_PUBLIC_REVENUECAT_WEB_API_KEY', 'sk_secret_key'],
+  ] as const)('rejects an unsafe production %s key', (platform, name, key) => {
+    expect(() => readRevenueCatPublicKey({ [name]: key }, 'production', platform))
+      .toThrow('production public key');
+  });
+
+  it('allows a RevenueCat Test Store key only outside production', () => {
+    const values = { EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: 'test_store_fixture' };
+    expect(readRevenueCatPublicKey(values, 'development', 'ios')).toBe('test_store_fixture');
+    expect(readRevenueCatPublicKey(values, 'preview', 'ios')).toBe('test_store_fixture');
+  });
 });
 
 describe('readPublicEnvironmentValues', () => {

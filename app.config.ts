@@ -5,6 +5,10 @@ const DEFAULT_SUPPORT_EMAIL = 'support@kin.invalid';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const environment = readBuildEnvironment();
+  const easBuildPlatform = process.env.EAS_BUILD_PLATFORM?.trim();
+  if (easBuildPlatform === 'ios' || easBuildPlatform === 'android') {
+    assertRevenueCatBuildKey(environment.deployment, easBuildPlatform);
+  }
   const publicUrl = new URL(environment.publicAppUrl);
   const verifiedWebDomain = publicUrl.protocol === 'https:'
     && !publicUrl.hostname.endsWith('.invalid')
@@ -154,4 +158,28 @@ function isLoopbackHostname(hostname: string): boolean {
     || normalized === '::1'
     || normalized === '[::1]'
     || /^127(?:\.\d{1,3}){3}$/.test(normalized);
+}
+
+function assertRevenueCatBuildKey(
+  deployment: BuildDeployment,
+  platform: 'android' | 'ios',
+): void {
+  if (deployment === 'demo') return;
+  const value = (platform === 'ios'
+    ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
+    : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY)?.trim();
+  if (!value) {
+    if (deployment === 'production') {
+      throw new Error(`Production Kin requires a RevenueCat ${platform} public key.`);
+    }
+    return;
+  }
+  const prefix = platform === 'ios' ? 'appl_' : 'goog_';
+  const validProviderKey = value.startsWith(prefix) && value.length > prefix.length;
+  const validTestStoreKey = value.startsWith('test_') && value.length > 'test_'.length;
+  if (deployment === 'production' ? !validProviderKey : !validProviderKey && !validTestStoreKey) {
+    throw new Error(
+      `Kin requires a valid RevenueCat ${platform} ${deployment === 'production' ? 'production ' : ''}public key.`,
+    );
+  }
 }

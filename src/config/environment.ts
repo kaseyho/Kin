@@ -1,4 +1,5 @@
 import { DEFAULT_KIN_SUPPORT_EMAIL, normalizeSupportEmail } from './support';
+import { readPlatformRevenueCatPublicEnvironment } from './revenuecat-public-key';
 
 export type KinDeployment = 'demo' | 'development' | 'preview' | 'production';
 
@@ -14,6 +15,7 @@ export type KinEnvironment =
     };
 
 export type EnvironmentValues = Record<string, string | undefined>;
+export type RevenueCatPlatform = 'android' | 'ios' | 'web';
 
 export class ConfigurationError extends Error {
   constructor(message: string) {
@@ -29,14 +31,57 @@ export function readPublicEnvironmentValues(): EnvironmentValues {
     EXPO_PUBLIC_KIN_ENVIRONMENT: process.env.EXPO_PUBLIC_KIN_ENVIRONMENT,
     EXPO_PUBLIC_KIN_PUBLIC_URL: process.env.EXPO_PUBLIC_KIN_PUBLIC_URL,
     EXPO_PUBLIC_KIN_SUPPORT_EMAIL: process.env.EXPO_PUBLIC_KIN_SUPPORT_EMAIL,
-    EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY:
-      process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
-    EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
-    EXPO_PUBLIC_REVENUECAT_WEB_API_KEY: process.env.EXPO_PUBLIC_REVENUECAT_WEB_API_KEY,
     EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
       process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+    ...readPlatformRevenueCatPublicEnvironment(),
   };
+}
+
+export function readRevenueCatPublicKey(
+  values: EnvironmentValues,
+  deployment: KinDeployment,
+  platform: string,
+): string | null {
+  if (deployment === 'demo') return null;
+  if (!isRevenueCatPlatform(platform)) {
+    if (deployment === 'production') {
+      throw new ConfigurationError(`Production Kin does not support RevenueCat on ${platform}.`);
+    }
+    return null;
+  }
+
+  const configuration = {
+    android: {
+      name: 'EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY',
+      prefix: 'goog_',
+    },
+    ios: {
+      name: 'EXPO_PUBLIC_REVENUECAT_IOS_API_KEY',
+      prefix: 'appl_',
+    },
+    web: {
+      name: 'EXPO_PUBLIC_REVENUECAT_WEB_API_KEY',
+      prefix: 'rcb_',
+    },
+  } as const;
+  const { name, prefix } = configuration[platform];
+  const value = values[name]?.trim();
+  if (!value) {
+    if (deployment === 'production') {
+      throw new ConfigurationError(`Production Kin requires a RevenueCat ${platform} public key.`);
+    }
+    return null;
+  }
+
+  const validProviderKey = value.startsWith(prefix) && value.length > prefix.length;
+  const validTestStoreKey = value.startsWith('test_') && value.length > 'test_'.length;
+  if (deployment === 'production' ? !validProviderKey : !validProviderKey && !validTestStoreKey) {
+    throw new ConfigurationError(
+      `Kin requires a valid RevenueCat ${platform} ${deployment === 'production' ? 'production ' : ''}public key.`,
+    );
+  }
+  return value;
 }
 
 export function readEnvironment(
@@ -135,6 +180,10 @@ export function isLoopbackHostname(hostname: string): boolean {
 
 function isDeployment(value: string | undefined): value is KinDeployment {
   return value === 'demo' || value === 'development' || value === 'preview' || value === 'production';
+}
+
+function isRevenueCatPlatform(value: string): value is RevenueCatPlatform {
+  return value === 'android' || value === 'ios' || value === 'web';
 }
 
 function isAllowedUrl(value: string, deployment: Exclude<KinDeployment, 'demo'>): boolean {

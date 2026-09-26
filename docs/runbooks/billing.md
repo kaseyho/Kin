@@ -13,6 +13,45 @@ event plus the current `kin_plus` projection. Duplicate event IDs are successful
 retries every provider or database failure because the function returns non-2xx until the database
 transaction commits.
 
+## Fixed RevenueCat dashboard contract
+
+Use these identifiers exactly in staging and production. Prices, trial availability, billing
+period display, and localized product titles remain dashboard/store data; do not copy them into app
+code or submission copy.
+
+| Resource | Exact identifier | Mapping |
+| --- | --- | --- |
+| Entitlement | `kin_plus` | Attach every paid Kin+ product and no unrelated product. |
+| Current offering | `default` | Mark current for every Kin app. |
+| Monthly package | `$rc_monthly` | Map the monthly product for Apple, Google, and RevenueCat Web Billing. |
+| Annual package | `$rc_annual` | Map the annual product for Apple, Google, and RevenueCat Web Billing. |
+| Apple monthly product | `com.kaseyho.kin.kinplus.monthly` | Auto-renewable monthly subscription. |
+| Apple annual product | `com.kaseyho.kin.kinplus.annual` | Auto-renewable annual subscription. |
+| Google monthly subscription | `kin_plus_monthly` | Base plan ID `monthly`. |
+| Google annual subscription | `kin_plus_annual` | Base plan ID `annual`. |
+| Web monthly product | `kin_plus_monthly_web` | RevenueCat Web Billing monthly product. |
+| Web annual product | `kin_plus_annual_web` | RevenueCat Web Billing annual product. |
+
+The Apple bundle ID and Google package are both `com.kaseyho.kin`. Add those native apps and one
+RevenueCat Web Billing app to each RevenueCat project. Public keys must begin `appl_`, `goog_`, and
+`rcb_` respectively. A `test_` Test Store key is allowed only in development/preview and is rejected
+by production validation.
+
+Set **Project settings → General → Restore behavior** to **Transfer if there are no active
+subscriptions** for both production and the sandbox override. This preserves strict ownership of an
+active subscription while allowing an expired purchaser to move on. Do not use legacy sharing.
+Changing this setting is a product/security change: rerun the two-account restore tests before
+release.
+
+Only the selected platform key is read into a client bundle. Configure local public values as
+needed; missing development/preview keys intentionally show the unavailable state:
+
+```dotenv
+EXPO_PUBLIC_REVENUECAT_IOS_API_KEY=appl_YOUR_PUBLIC_KEY
+EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY=goog_YOUR_PUBLIC_KEY
+EXPO_PUBLIC_REVENUECAT_WEB_API_KEY=rcb_YOUR_PUBLIC_KEY
+```
+
 ## Credential-free verification
 
 Use Node 22 and run the Deno, database, and application gates:
@@ -108,6 +147,14 @@ Create two RevenueCat webhook integrations rather than mixing environments:
 1. **Kin staging** — staging Supabase URL, sandbox events only.
 2. **Kin production** — production Supabase URL, production events only.
 
+Both integrations cover the Apple, Google, and Web Billing apps, and send these subscription
+lifecycle event types: `INITIAL_PURCHASE`, `RENEWAL`, `CANCELLATION`, `UNCANCELLATION`,
+`NON_RENEWING_PURCHASE`, `SUBSCRIPTION_PAUSED`, `EXPIRATION`, `BILLING_ISSUE`, `PRODUCT_CHANGE`,
+`SUBSCRIPTION_EXTENDED`, `REFUND_REVERSED`, and `INVOICE_ISSUANCE`. Exclude virtual-currency,
+experiment, price-consent, deprecated alias, purchase-redemption, and transfer events. The chosen
+restore policy prevents active identified-user transfers; a change to that policy requires a
+separate transfer-aware projection design before the filter is broadened.
+
 For each integration, use the corresponding HTTPS endpoint:
 
 ```text
@@ -131,6 +178,7 @@ npx supabase secrets set \
   REVENUECAT_WEBHOOK_AUTHORIZATION="$REVENUECAT_WEBHOOK_AUTHORIZATION" \
   REVENUECAT_WEBHOOK_SIGNING_SECRET="$REVENUECAT_WEBHOOK_SIGNING_SECRET" \
   REVENUECAT_SECRET_API_KEY="$REVENUECAT_SECRET_API_KEY"
+npx supabase db push
 npx supabase functions deploy revenuecat-webhook --no-verify-jwt
 
 unset REVENUECAT_WEBHOOK_AUTHORIZATION REVENUECAT_WEBHOOK_SIGNING_SECRET REVENUECAT_SECRET_API_KEY
@@ -139,6 +187,43 @@ unset REVENUECAT_WEBHOOK_AUTHORIZATION REVENUECAT_WEBHOOK_SIGNING_SECRET REVENUE
 The client App User ID must be the signed-in Supabase UUID. Do not launch with anonymous RevenueCat
 IDs as the only identity: the webhook deliberately rejects an alias set without exactly one UUID.
 The entitlement identifier must be exactly `kin_plus` in both RevenueCat projects.
+
+Set public keys in the matching EAS environment, never as Supabase secrets. Set the web key only in
+the web host's production environment. Before deploying a new client, run:
+
+```bash
+npm run verify:environment
+npm run verify:bundle-config
+```
+
+The first command rejects missing/wrong-platform/Test Store keys for production native builds. The
+second performs a clean production web export and fails if a native key value, server-secret name,
+server-secret fixture, or known secret prefix reaches the bundle.
+
+## Sandbox acceptance
+
+Use staging Supabase, sandbox/Test Store products, and non-production store accounts. Do not test a
+real purchase in the labelled demo deployment.
+
+1. Confirm `default` is current and `$rc_monthly`/`$rc_annual` each expose the expected platform
+   product with provider-derived localized price, billing period, and only configured trial copy.
+2. Sign in as Supabase account A, confirm its UUID is the RevenueCat App User ID, buy monthly, and
+   verify client entitlement plus the private `kin_plus` projection.
+3. Cancel the purchase flow and confirm Kin shows no error or entitlement change.
+4. Cancel renewal and confirm access remains active through expiry; then exercise expiration and a
+   billing grace period.
+5. Restore on a clean install while signed into account A; verify the entitlement returns.
+6. Switch to account B on the same device/browser. Confirm A's entitlement, offering cache, and
+   package selection never appear for B. With an active A subscription, B's restore must not claim
+   it under the configured restore policy.
+7. Trigger a provider failure and a database failure, confirm non-2xx webhook delivery, repair it,
+   and use RevenueCat **Retry** to prove idempotent recovery.
+8. Verify an active subscriber can create a sixth Moment, then expire access and confirm existing
+   Moments stay readable/editable while a new one is blocked.
+
+Capture only build/version, platform, test account UUID, package ID, localized visible terms,
+coarse event ID/type/environment, HTTP status, projection timestamps, and pass/fail. Redact
+transaction/order IDs if a screenshot would expose them.
 
 ## Health checks and redacted evidence
 
@@ -170,6 +255,25 @@ outcome. Capture those fields plus HTTP status and timestamps as evidence. Never
 body, Authorization or signature headers, email, subscriber attributes, receipt, product receipt,
 or secret API response.
 
+## Account switching, deletion, management, and support
+
+- Kin configures RevenueCat with the signed-in Supabase UUID. Sign-out/account switching clears
+  local entitlement and package state before another account can render it. Native provider cleanup
+  is best-effort and never traps Supabase sign-out.
+- Subscription management opens the provider/store URL when available; native builds fall back to
+  RevenueCat Customer Center. A subscription can normally be managed only on its purchase platform.
+- Deleting a Kin account removes its Supabase data and private entitlement projection. It does **not**
+  delete the RevenueCat customer, cancel an App Store/Google Play/Web Billing subscription, issue a
+  refund, or stop future store charges. Customer deletion in RevenueCat also does not cancel the
+  underlying store subscription.
+- Support must tell a subscriber to manage/cancel the subscription on the purchase platform before
+  deleting the Kin account. If deletion already happened, identify the charge by store transaction
+  through the provider dashboard, guide cancellation/refund under store policy, and never recreate
+  or grant a Kin entitlement from an email claim alone.
+- Under **Transfer if there are no active subscriptions**, an active receipt remains with its
+  original Kin UUID. Recover the original Kin account where possible; otherwise cancel/refund via
+  the store and document the incident. Do not change restore behavior for one support case.
+
 ## Retry and reconciliation
 
 RevenueCat automatically retries non-2xx deliveries. After fixing configuration or an outage, use
@@ -195,6 +299,17 @@ unset REVENUECAT_SECRET_API_KEY REVENUECAT_APP_USER_ID
 Then resend the newest relevant webhook from RevenueCat so the normal authenticated path refreshes
 the projection. A direct SQL repair is an emergency-only incident action and must use the existing
 `sync_revenuecat_entitlement` transaction with a unique incident event ID, never table writes.
+
+## Rollback
+
+If checkout is unsafe but entitlement reads are healthy, remove `default` as the current offering
+or remove its packages to stop new purchases; leave restore and subscription management available.
+Roll back the web/native client independently, but do not reverse or delete the billing migration.
+
+If webhook projection is unsafe, redeploy the last known-good `revenuecat-webhook` function and let
+failed events remain non-2xx so RevenueCat keeps retrying. After repair, resend each failed event and
+compare current subscriber state with the projection. Never return a synthetic 200, delete event
+receipts, or manually flip `is_active` to quiet an incident.
 
 ## Secret rotation and incident response
 

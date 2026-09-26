@@ -9,7 +9,7 @@ The repository contains a mobile-first Expo app with four explicit deployment pr
 - **Preview** uses hosted staging services and internal-distribution builds.
 - **Production** requires hosted services and real platform billing.
 
-`EXPO_PUBLIC_KIN_ENVIRONMENT` must select one profile. Missing or unsafe connected configuration renders a dedicated setup screen; Kin never substitutes demo data silently. The current connected adapter still has a temporary anonymous-auth path and is therefore not a consumer release until the production account-lifecycle milestone replaces it with email OTP.
+`EXPO_PUBLIC_KIN_ENVIRONMENT` must select one profile. Missing or unsafe connected configuration renders a dedicated setup screen; Kin never substitutes demo data silently. Connected Kin uses email OTP and identifies RevenueCat customers with the signed-in Supabase UUID.
 
 ## Run the app
 
@@ -37,12 +37,12 @@ The optional `demoDate=YYYY-MM-DD` parameter pins date-sensitive resurfacing for
 ## Verification
 
 ```bash
-npm run verify
+npm run verify:ci
 npm run e2e
-npm run audit:production
+npm run test:database
 ```
 
-`npm run verify` runs the resolved Expo environment check, TypeScript, Expo ESLint, all Jest component/domain/acceptance tests, and a demo-profile production web export. `npm run e2e` starts Expo web in explicit demo mode and runs the browser-driven phone and wide-screen flows. `npm run audit:production` fails for high or critical production dependency advisories while reporting moderate findings for review. Playwright may ask for its browser once:
+`npm run verify:ci` validates demo and platform-specific production configuration, runs TypeScript, Expo ESLint, all Jest component/domain/acceptance tests, exports demo web, scans a production web bundle for secrets/native keys, checks and tests Edge Functions, and enforces the production dependency policy. `npm run e2e` runs the browser-driven phone and wide-screen flows. `npm run test:database` resets/upgrades local Supabase and runs pgTAP/RLS/concurrency checks. Playwright may ask for its browser once:
 
 ```bash
 npx playwright install chromium
@@ -63,7 +63,7 @@ EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YOUR_PUBLIC_KEY
 ```
 
-Never place a service-role key in an Expo public variable. The existing anonymous connected path is temporary development behavior, not a production auth recommendation. Apply the checked-in migration only after selecting and authenticating the intended project:
+Never place a service-role key in an Expo public variable. Connected mode uses email OTP and never silently creates an anonymous production identity. Apply the checked-in migration only after selecting and authenticating the intended project:
 
 ```bash
 supabase link --project-ref YOUR_PROJECT_REF
@@ -82,7 +82,7 @@ The migration creates profiles, Kin Spaces, membership, themes, messages, reacti
 
 ## Kin+ and RevenueCat
 
-Kin+ uses the RevenueCat entitlement identifier `kin_plus`. Configure a current offering with monthly and/or annual packages in RevenueCat, then place only the platform public SDK keys in the untracked `.env` file:
+Kin+ uses the RevenueCat entitlement identifier `kin_plus`, current offering `default`, and standard `$rc_monthly` / `$rc_annual` packages. Prices, periods, trials, and titles come from provider dashboards. Place only platform public SDK keys in the untracked `.env` file:
 
 ```dotenv
 EXPO_PUBLIC_REVENUECAT_IOS_API_KEY=appl_YOUR_PUBLIC_KEY
@@ -90,7 +90,9 @@ EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY=goog_YOUR_PUBLIC_KEY
 EXPO_PUBLIC_REVENUECAT_WEB_API_KEY=rcb_YOUR_PUBLIC_KEY
 ```
 
-Real native purchases require a configured development build. Production web billing also requires a RevenueCat Web Billing app. Until the production billing milestone is complete and externally verified, missing development/preview keys expose an unavailable entitlement and missing production keys fail configuration. Demo-mode activation remains labeled and stored separately from provider state.
+Production accepts `appl_` for iOS, `goog_` for Android, and `rcb_` for web; `test_` keys are development/preview only. The web bundle reads only the web key, and native builds select their own platform key. Server API keys, webhook authorization, and HMAC secrets belong only in Supabase Edge Function secrets. Missing development/preview keys expose a truthful unavailable state; missing or wrong production keys fail configuration. Demo activation remains visibly labelled and isolated from provider state.
+
+Follow [`docs/runbooks/billing.md`](docs/runbooks/billing.md) for exact product mappings, restore behavior, webhook filters/secrets, sandbox acceptance, deployment, reconciliation, rollback, and account-deletion support caveats.
 
 ## Architecture
 
