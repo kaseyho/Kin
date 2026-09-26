@@ -69,6 +69,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     experiments: { typedRoutes: true },
     extra: {
       ...config.extra,
+      eas: {
+        projectId: '8345e2fe-ef3d-4284-9864-7f74104c09da',
+      },
       kinEnvironment: environment.deployment,
       kinPublicUrl: environment.publicAppUrl,
       kinSupportEmail: environment.supportEmail,
