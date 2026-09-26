@@ -22,6 +22,7 @@ it('labels, publishes, and separately persists a demo Kin+ entitlement', async (
   const listener = jest.fn();
   service.subscribe(listener);
 
+  expect(await service.activateUser('demo-user')).toEqual({ isKinPlus: false, source: 'demo' });
   expect(await service.getEntitlement()).toEqual({ isKinPlus: false, source: 'demo' });
   expect((await service.getOffering())?.packages[0]).toMatchObject({
     id: 'demo-kin-plus',
@@ -29,6 +30,7 @@ it('labels, publishes, and separately persists a demo Kin+ entitlement', async (
   });
   await service.purchase('demo-kin-plus');
   expect(listener).toHaveBeenCalledWith({ isKinPlus: true, source: 'demo' });
+  await expect(service.manageSubscription()).rejects.toMatchObject({ code: 'unavailable' });
 
   const reloaded = createDemoPremiumService(false, storage);
   expect(await reloaded.getEntitlement()).toEqual({ isKinPlus: true, source: 'demo' });

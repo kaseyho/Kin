@@ -117,8 +117,11 @@ describe('non-happy product states', () => {
 
   it('explains unavailable billing and leaves Restore as the recovery action', async () => {
     const unavailable: PremiumService = {
+      activateUser: async () => ({ isKinPlus: false, source: 'unavailable' }),
+      deactivateUser: async () => undefined,
       getEntitlement: async () => ({ isKinPlus: false, source: 'unavailable' }),
       getOffering: async () => null,
+      manageSubscription: async () => undefined,
       purchase: async () => { throw new BillingError('unavailable', 'Billing unavailable'); },
       restore: async () => ({ isKinPlus: false, source: 'unavailable' }),
       subscribe: () => () => undefined,
@@ -136,11 +139,14 @@ describe('non-happy product states', () => {
   it('treats cancellation quietly, exposes purchase retry, and reports an empty restore', async () => {
     let attempts = 0;
     const service: PremiumService = {
+      activateUser: async () => ({ isKinPlus: false, source: 'revenuecat' }),
+      deactivateUser: async () => undefined,
       getEntitlement: async () => ({ isKinPlus: false, source: 'revenuecat' }),
       getOffering: async () => ({
         id: 'default',
         packages: [{ id: 'monthly', priceLabel: '$3.99', title: 'Monthly' }],
       }),
+      manageSubscription: async () => undefined,
       purchase: async () => {
         attempts += 1;
         throw new BillingError(attempts === 1 ? 'cancelled' : 'purchase_failed', 'Could not finish purchase');

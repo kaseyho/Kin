@@ -56,9 +56,14 @@ export function createPremiumService(
 function createUnavailablePremiumService(): PremiumService {
   const entitlement = { isKinPlus: false, source: 'unavailable' } as const;
   return {
+    activateUser: async () => entitlement,
+    deactivateUser: async () => undefined,
     getEntitlement: async () => entitlement,
     subscribe: () => () => undefined,
     getOffering: async () => null,
+    manageSubscription: async () => {
+      throw new BillingError('unavailable', 'Kin+ subscription management is not configured for this build.');
+    },
     purchase: async () => {
       throw new BillingError('unavailable', 'Kin+ purchases are not configured for this build.');
     },

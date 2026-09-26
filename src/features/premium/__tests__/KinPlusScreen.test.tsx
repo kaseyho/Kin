@@ -28,9 +28,12 @@ describe('KinPlusScreen', () => {
 
   it('explains unavailable browser billing without hiding Restore', async () => {
     const service: PremiumService = {
+      activateUser: async () => ({ isKinPlus: false, source: 'unavailable' }),
+      deactivateUser: async () => undefined,
       getEntitlement: async () => ({ isKinPlus: false, source: 'unavailable' }),
       subscribe: () => () => undefined,
       getOffering: async () => null,
+      manageSubscription: async () => undefined,
       purchase: async () => { throw new BillingError('unavailable', 'Billing unavailable'); },
       restore: async () => ({ isKinPlus: false, source: 'unavailable' }),
     };
@@ -43,12 +46,15 @@ describe('KinPlusScreen', () => {
   it('treats cancellation quietly, offers Retry after failure, and reports an empty restore', async () => {
     let attempts = 0;
     const service: PremiumService = {
+      activateUser: async () => ({ isKinPlus: false, source: 'revenuecat' }),
+      deactivateUser: async () => undefined,
       getEntitlement: async () => ({ isKinPlus: false, source: 'revenuecat' }),
       subscribe: () => () => undefined,
       getOffering: async () => ({
         id: 'default',
         packages: [{ id: 'monthly', title: 'Monthly', priceLabel: '$3.99' }],
       }),
+      manageSubscription: async () => undefined,
       purchase: async () => {
         attempts += 1;
         throw new BillingError(attempts === 1 ? 'cancelled' : 'purchase_failed', 'Could not finish purchase');

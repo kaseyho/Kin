@@ -131,12 +131,15 @@ export interface EntitlementState {
   isKinPlus: boolean;
   source: 'demo' | 'revenuecat' | 'unavailable';
   expiresAt?: ISODateTime;
+  canManageSubscription?: boolean;
 }
 
 export interface KinPlusPackage {
   id: string;
   title: string;
   priceLabel: string;
+  billingPeriodLabel?: string;
+  trialLabel?: string;
 }
 
 export interface KinPlusOffering {

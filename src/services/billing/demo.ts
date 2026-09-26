@@ -36,12 +36,17 @@ export function createDemoPremiumService(
   };
 
   return {
+    activateUser: async () => load(),
+    deactivateUser: async () => undefined,
     getEntitlement: load,
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
     getOffering: async () => offering,
+    manageSubscription: async () => {
+      throw new BillingError('unavailable', 'Subscription management is unavailable in demo mode.');
+    },
     purchase: async (packageId) => {
       if (packageId !== 'demo-kin-plus') {
         throw new BillingError('purchase_failed', 'That Kin+ option is not available in this demo.');
