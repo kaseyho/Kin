@@ -151,9 +151,11 @@ Both integrations cover the Apple, Google, and Web Billing apps, and send these 
 lifecycle event types: `INITIAL_PURCHASE`, `RENEWAL`, `CANCELLATION`, `UNCANCELLATION`,
 `NON_RENEWING_PURCHASE`, `SUBSCRIPTION_PAUSED`, `EXPIRATION`, `BILLING_ISSUE`, `PRODUCT_CHANGE`,
 `SUBSCRIPTION_EXTENDED`, `REFUND_REVERSED`, and `INVOICE_ISSUANCE`. Exclude virtual-currency,
-experiment, price-consent, deprecated alias, purchase-redemption, and transfer events. The chosen
-restore policy prevents active identified-user transfers; a change to that policy requires a
-separate transfer-aware projection design before the filter is broadened.
+experiment, price-consent, deprecated alias, purchase-redemption, temporary-entitlement-grant, and
+transfer events. Temporary grants and transfers use reduced identity field groups that this strict
+UUID projection deliberately rejects. The chosen restore policy prevents active identified-user
+transfers; a change to that policy requires a separate transfer-aware projection design before the
+filter is broadened.
 
 For each integration, use the corresponding HTTPS endpoint:
 

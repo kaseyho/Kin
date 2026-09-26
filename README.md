@@ -114,4 +114,7 @@ The following are **not externally verified by the repository alone**:
 
 Those checks must be repeated with the intended external projects, store accounts, signed development builds, and devices before release.
 
+The latest billing evidence and the still-open hosted staging gate are recorded in
+[`docs/verification/2026-09-27-billing-entitlements.md`](docs/verification/2026-09-27-billing-entitlements.md).
+
 See [`docs/runbooks/development.md`](docs/runbooks/development.md) for the verified setup, CI-equivalent commands, EAS profiles, generated-file rules, and external gates. The full consumer-release contract is [`docs/superpowers/specs/2026-09-14-kin-production-readiness-design.md`](docs/superpowers/specs/2026-09-14-kin-production-readiness-design.md).
