@@ -13,7 +13,7 @@ it('carries a demo Kin+ entitlement into premium relationship expression', async
   const billing = createDemoPremiumService(false);
   const user = userEvent.setup();
   const result = await render(
-    <PremiumProvider service={billing}>
+    <PremiumProvider authState={{ status: 'demo' }} deployment="demo" service={billing}>
       <KinProvider repository={repository}>
         <KinPlusScreen onClose={jest.fn()} />
       </KinProvider>
@@ -23,7 +23,7 @@ it('carries a demo Kin+ entitlement into premium relationship expression', async
   expect(await screen.findByRole('header', { name: 'Kin+ is active' })).toBeTruthy();
 
   await result.rerender(
-    <PremiumProvider service={billing}>
+    <PremiumProvider authState={{ status: 'demo' }} deployment="demo" service={billing}>
       <KinProvider repository={repository}>
         <PersonalizeSpaceSheet
           onClose={jest.fn()}

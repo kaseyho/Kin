@@ -10,6 +10,7 @@ import {
 import type { AuthService, AuthState } from '@/services/auth/contracts';
 import type { AccountService } from '@/services/account/contracts';
 import type { NotificationService } from '@/services/notifications/contracts';
+import type { PremiumService } from '@/services/billing/contracts';
 
 export interface AuthContextValue {
   accountService: AccountService;
@@ -25,12 +26,14 @@ interface AuthProviderProps extends PropsWithChildren {
   accountService: AccountService;
   service: AuthService;
   notificationService?: NotificationService;
+  premiumService?: PremiumService;
 }
 
 export function AuthProvider({
   accountService,
   children,
   notificationService,
+  premiumService,
   service,
 }: AuthProviderProps) {
   const [state, setState] = useState<AuthState>({ status: 'loading' });
@@ -70,14 +73,13 @@ export function AuthProvider({
     return user;
   }, [service]);
   const signOut = useCallback<AuthService['signOut']>(async () => {
-    try {
-      await notificationService?.deactivateCurrentInstallation();
-    } catch {
-      // A local or network cleanup failure must not trap someone in their account.
-    }
+    await Promise.allSettled([
+      notificationService?.deactivateCurrentInstallation() ?? Promise.resolve(),
+      premiumService?.deactivateUser() ?? Promise.resolve(),
+    ]);
     await service.signOut();
     setState({ status: 'signed-out' });
-  }, [notificationService, service]);
+  }, [notificationService, premiumService, service]);
 
   const value = useMemo<AuthContextValue>(
     () => ({ accountService, requestOtp, signOut, state, verifyOtp }),

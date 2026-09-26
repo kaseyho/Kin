@@ -55,6 +55,7 @@ export default function RootLayout() {
       <AuthProvider
         accountService={runtime.accountService}
         notificationService={runtime.notificationService}
+        premiumService={runtime.premiumService}
         service={runtime.authService}
       >
         <AuthenticatedApp reducedMotion={reducedMotion} runtime={runtime} />
@@ -77,7 +78,11 @@ function AuthenticatedApp({
   const authAvailable = auth.state.status === 'signed-out';
 
   return (
-    <PremiumProvider service={readyRuntime.premiumService}>
+    <PremiumProvider
+      authState={auth.state}
+      deployment={readyRuntime.environment.deployment}
+      service={readyRuntime.premiumService}
+    >
       <NotificationProvider active={kinActive} service={readyRuntime.notificationService}>
         <NotificationSignOutCleaner service={readyRuntime.notificationService} storage={AsyncStorage} />
         <ConnectivityProvider>

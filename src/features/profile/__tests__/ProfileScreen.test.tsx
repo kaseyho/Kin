@@ -21,7 +21,7 @@ it('opens profile editing from the current identity card', async () => {
   const user = userEvent.setup();
   await render(
     <AuthContext.Provider value={auth}>
-      <PremiumProvider service={createDemoPremiumService()}>
+      <PremiumProvider authState={auth.state} deployment="demo" service={createDemoPremiumService()}>
         <KinProvider repository={repository}>
           <ProfileScreen onOpenKinPlus={jest.fn()} onSignedOut={jest.fn()} />
         </KinProvider>
@@ -58,7 +58,7 @@ it('exposes export and deletion only for a connected signed-in account', async (
   };
   await render(
     <AuthContext.Provider value={auth}>
-      <PremiumProvider service={createDemoPremiumService()}>
+      <PremiumProvider authState={auth.state} deployment="demo" service={createDemoPremiumService()}>
         <KinProvider repository={repository}>
           <ProfileScreen onOpenKinPlus={jest.fn()} onSignedOut={jest.fn()} />
         </KinProvider>
@@ -88,7 +88,7 @@ it('reports a failed Space restore and lets the user retry', async () => {
   const user = userEvent.setup();
   await render(
     <AuthContext.Provider value={auth}>
-      <PremiumProvider service={createDemoPremiumService()}>
+      <PremiumProvider authState={auth.state} deployment="demo" service={createDemoPremiumService()}>
         <KinProvider repository={repository}>
           <ProfileScreen onOpenKinPlus={jest.fn()} onSignedOut={jest.fn()} />
         </KinProvider>

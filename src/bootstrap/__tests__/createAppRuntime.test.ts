@@ -128,4 +128,48 @@ describe('createAppRuntime', () => {
     });
     expect(clientsSeen).toEqual([client, client, client, client]);
   });
+
+  it('constructs billing before account/auth wrappers and supplies it to account cleanup', () => {
+    const order: string[] = [];
+    let premiumSeenByAccount: PremiumService | undefined;
+
+    createAppRuntime(
+      storage,
+      { EXPO_PUBLIC_KIN_ENVIRONMENT: 'demo' },
+      {
+        createAccountService: (
+          _storage,
+          _values,
+          _environment,
+          _client,
+          _notifications,
+          suppliedPremium,
+        ) => {
+          order.push('account');
+          premiumSeenByAccount = suppliedPremium;
+          return accountService;
+        },
+        createAuthService: () => {
+          order.push('auth');
+          return authService;
+        },
+        createNotificationService: () => {
+          order.push('notifications');
+          return notificationService;
+        },
+        createPremiumService: () => {
+          order.push('premium');
+          return premiumService;
+        },
+        createRepository: () => {
+          order.push('repository');
+          return repository;
+        },
+      },
+    );
+
+    expect(order.indexOf('premium')).toBeLessThan(order.indexOf('account'));
+    expect(order.indexOf('premium')).toBeLessThan(order.indexOf('auth'));
+    expect(premiumSeenByAccount).toBe(premiumService);
+  });
 });

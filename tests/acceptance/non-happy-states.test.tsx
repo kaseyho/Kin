@@ -127,12 +127,16 @@ describe('non-happy product states', () => {
       subscribe: () => () => undefined,
     };
     await render(
-      <PremiumProvider service={unavailable}>
+      <PremiumProvider
+        authState={{ status: 'signed-in', user: { email: 'maya@example.com', id: 'maya' } }}
+        deployment="development"
+        service={unavailable}
+      >
         <KinPlusScreen onClose={jest.fn()} />
       </PremiumProvider>,
     );
 
-    expect(await screen.findByText('Purchases need a configured development build')).toBeTruthy();
+    expect(await screen.findByText('No Kin+ offering is available for this build')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Restore purchases' })).toBeTruthy();
   });
 
@@ -156,7 +160,11 @@ describe('non-happy product states', () => {
     };
     const user = userEvent.setup();
     await render(
-      <PremiumProvider service={service}>
+      <PremiumProvider
+        authState={{ status: 'signed-in', user: { email: 'maya@example.com', id: 'maya' } }}
+        deployment="development"
+        service={service}
+      >
         <KinPlusScreen onClose={jest.fn()} />
       </PremiumProvider>,
     );

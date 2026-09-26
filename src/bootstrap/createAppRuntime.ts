@@ -41,6 +41,7 @@ interface RuntimeFactories {
     environment: KinEnvironment,
     client?: SupabaseClient<Database>,
     notificationService?: NotificationService,
+    premiumService?: PremiumService,
   ) => AccountService;
   createAuthService: (
     storage: StorageAdapter,
@@ -73,12 +74,23 @@ interface RuntimeFactories {
 }
 
 const defaultFactories: RuntimeFactories = {
-  createAccountService: (_storage, _values, environment, client, notificationService) =>
+  createAccountService: (
+    _storage,
+    _values,
+    environment,
+    client,
+    notificationService,
+    premiumService,
+  ) =>
     environment.mode === 'demo'
       ? createDemoAccountService()
       : createSupabaseAccountService(requireConnectedClient(client), {
-          beforeDelete: () => notificationService?.deactivateCurrentInstallation()
-            ?? Promise.resolve(),
+          beforeDelete: async () => {
+            await Promise.allSettled([
+              notificationService?.deactivateCurrentInstallation() ?? Promise.resolve(),
+              premiumService?.deactivateUser() ?? Promise.resolve(),
+            ]);
+          },
         }),
   createAuthService: (_storage, _values, environment, client) =>
     environment.mode === 'demo'
@@ -122,25 +134,30 @@ export function createAppRuntime(
           url: environment.supabaseUrl,
         })
       : undefined;
+    const premiumService = factories.createPremiumService(storage, values, environment);
     const notificationService = factories.createNotificationService(
       storage,
       values,
       environment,
       client,
     );
+    const accountService = factories.createAccountService(
+      storage,
+      values,
+      environment,
+      client,
+      notificationService,
+      premiumService,
+    );
+    const authService = factories.createAuthService(storage, values, environment, client);
+    const repository = factories.createRepository(storage, values, environment, client);
     return {
-      accountService: factories.createAccountService(
-        storage,
-        values,
-        environment,
-        client,
-        notificationService,
-      ),
-      authService: factories.createAuthService(storage, values, environment, client),
+      accountService,
+      authService,
       environment,
       notificationService,
-      premiumService: factories.createPremiumService(storage, values, environment),
-      repository: factories.createRepository(storage, values, environment, client),
+      premiumService,
+      repository,
       status: 'ready',
     };
   } catch (error) {

@@ -4,6 +4,7 @@ import { Pressable, Text } from 'react-native';
 
 import type { AuthService, AuthState, AuthUser } from '@/services/auth/contracts';
 import type { AccountService } from '@/services/account/contracts';
+import type { PremiumService } from '@/services/billing/contracts';
 import type { NotificationService } from '@/services/notifications/contracts';
 import { AuthProvider } from '../AuthProvider';
 import { useAuth } from '../useAuth';
@@ -85,6 +86,20 @@ function createNotificationService(
     setCurrentDeviceEnabled: async () => state,
     setPreviewsEnabled: async () => state,
     subscribeToResponses: () => () => undefined,
+  };
+}
+
+function createPremiumService(deactivateUser: () => Promise<void>): PremiumService {
+  const state = { isKinPlus: false, source: 'revenuecat' as const };
+  return {
+    activateUser: async () => state,
+    deactivateUser,
+    getEntitlement: async () => state,
+    getOffering: async () => null,
+    manageSubscription: async () => undefined,
+    purchase: async () => state,
+    restore: async () => state,
+    subscribe: () => () => undefined,
   };
 }
 
@@ -217,7 +232,7 @@ describe('AuthProvider', () => {
     expect(screen.getByText('account-ready')).toBeTruthy();
   });
 
-  it('attempts device deactivation before sign-out without trapping the user on cleanup failure', async () => {
+  it('attempts device and billing deactivation before sign-out without trapping the user', async () => {
     const service = new FakeAuthService();
     const events: string[] = [];
     const originalSignOut = service.signOut.bind(service);
@@ -226,13 +241,18 @@ describe('AuthProvider', () => {
       await originalSignOut();
     });
     const notificationService = createNotificationService(jest.fn(async () => {
-      events.push('deactivate');
+      events.push('deactivate-notifications');
       throw new Error('offline');
+    }));
+    const premiumService = createPremiumService(jest.fn(async () => {
+      events.push('deactivate-billing');
+      throw new Error('provider unavailable');
     }));
     await render(
       <AuthProvider
         accountService={accountService}
         notificationService={notificationService}
+        premiumService={premiumService}
         service={service}
       >
         <Probe />
@@ -246,6 +266,6 @@ describe('AuthProvider', () => {
     await act(async () => fireEvent.press(screen.getByText('Sign out')));
 
     await waitFor(() => expect(screen.getByText('signed-out')).toBeTruthy());
-    expect(events).toEqual(['deactivate', 'sign-out']);
+    expect(events).toEqual(['deactivate-notifications', 'deactivate-billing', 'sign-out']);
   });
 });
