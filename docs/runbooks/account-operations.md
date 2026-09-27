@@ -1,9 +1,10 @@
 # Kin account export and deletion operations
 
 This runbook covers the privileged account lifecycle implemented by the `export-account` and
-`delete-account` Supabase Edge Functions. Both functions validate the caller's bearer token inside
-the handler. Deletion additionally requires a token issued in the previous ten minutes, which the
-consumer flow obtains by verifying a fresh six-digit email OTP.
+`delete-account` Supabase Edge Functions. Both consumer functions validate the caller's bearer
+token inside the handler. Consumer deletion additionally requires a token issued in the previous ten
+minutes, which the app obtains by verifying a fresh six-digit email OTP. A verified external support
+request uses the server-only operator tool below and never bypasses cleanup preparation.
 
 ## Consumer behavior
 
@@ -18,6 +19,47 @@ consumer flow obtains by verifying a fresh six-digit email OTP.
   member; an empty Space is deleted. Reports remain pseudonymized for the documented 180-day safety
   retention period and are excluded from export/UI reads. Owned media is durably queued and retried.
   The client signs out only after the function returns `{ "deleted": true }`.
+
+## Verified external deletion requests
+
+The public `/account-deletion` page lets a person initiate deletion even when they cannot open the
+app. The support operator must use this workflow; direct Auth dashboard deletion is prohibited
+because it can skip durable media-cleanup preparation.
+
+1. Accept the request only through the published Kin support mailbox. Never ask for a password,
+   OTP, access token, exported JSON, or conversation content.
+2. Send a unique, time-bounded confirmation phrase to the account email and require a reply that
+   includes it. Record the support ticket using a non-PII reference such as `support-1042`.
+3. In Supabase Auth, resolve the verified account email to its user UUID. Recheck the displayed
+   email and UUID against the support record before continuing.
+4. Tell the requester that Kin account deletion does not cancel an Apple, Google, or Web Billing
+   subscription and provide the appropriate store cancellation path.
+5. From a trusted operator shell, expose `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` only for the
+   lifetime of the command. Retrieve the service-role value from the approved secret store; do not
+   paste it into this repository, a ticket, chat, screenshot, or shell-history command.
+6. Run the deletion tool with the same UUID twice and the non-PII support reference:
+
+   ```bash
+   npx --yes deno@2.9.6 run \
+     --allow-env=SUPABASE_URL,SUPABASE_SERVICE_ROLE_KEY \
+     --allow-net \
+     scripts/process-account-deletion-request.ts \
+     --user-id <verified-user-uuid> \
+     --confirm-user-id <verified-user-uuid> \
+     --request-reference <non-pii-ticket-reference>
+   ```
+
+7. Record the returned operation ID, status, and whether cleanup is pending. Clear the two
+   environment variables from the shell immediately.
+8. Verify the Auth user and profile are absent. If cleanup is pending, run the documented storage
+   cleanup worker and verify no prepared, pending, or processing job remains for the UUID.
+9. Reply to the requester only after the server records confirm completion. Keep the support record
+   according to the approved support-retention policy.
+
+The tool refuses malformed UUIDs, mismatched confirmation, and ticket references that could contain
+an email address. It checks that the Auth user exists, then reuses the app's exact prepare, Auth
+delete, cleanup activation, Storage removal, and durable retry behavior. Its output contains no email
+address or relationship content.
 
 ## Required server configuration
 

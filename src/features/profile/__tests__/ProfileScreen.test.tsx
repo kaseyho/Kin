@@ -23,7 +23,7 @@ it('opens profile editing from the current identity card', async () => {
     <AuthContext.Provider value={auth}>
       <PremiumProvider authState={auth.state} deployment="demo" service={createDemoPremiumService()}>
         <KinProvider repository={repository}>
-          <ProfileScreen onOpenKinPlus={jest.fn()} onSignedOut={jest.fn()} />
+          <ProfileScreen onOpenKinPlus={jest.fn()} onOpenLegal={jest.fn()} onSignedOut={jest.fn()} />
         </KinProvider>
       </PremiumProvider>
     </AuthContext.Provider>,
@@ -60,7 +60,7 @@ it('exposes export and deletion only for a connected signed-in account', async (
     <AuthContext.Provider value={auth}>
       <PremiumProvider authState={auth.state} deployment="demo" service={createDemoPremiumService()}>
         <KinProvider repository={repository}>
-          <ProfileScreen onOpenKinPlus={jest.fn()} onSignedOut={jest.fn()} />
+          <ProfileScreen onOpenKinPlus={jest.fn()} onOpenLegal={jest.fn()} onSignedOut={jest.fn()} />
         </KinProvider>
       </PremiumProvider>
     </AuthContext.Provider>,
@@ -90,7 +90,7 @@ it('reports a failed Space restore and lets the user retry', async () => {
     <AuthContext.Provider value={auth}>
       <PremiumProvider authState={auth.state} deployment="demo" service={createDemoPremiumService()}>
         <KinProvider repository={repository}>
-          <ProfileScreen onOpenKinPlus={jest.fn()} onSignedOut={jest.fn()} />
+          <ProfileScreen onOpenKinPlus={jest.fn()} onOpenLegal={jest.fn()} onSignedOut={jest.fn()} />
         </KinProvider>
       </PremiumProvider>
     </AuthContext.Provider>,
@@ -102,4 +102,41 @@ it('reports a failed Space restore and lets the user retry', async () => {
   await user.press(screen.getByRole('button', { name: 'Try restoring Kin Space with Jamie' }));
   await waitFor(() => expect(archive).toHaveBeenCalledTimes(2));
   await waitFor(() => expect(screen.queryByText('Jamie')).toBeNull());
+});
+
+it('opens every public legal and support page from Profile', async () => {
+  const repository = createTestRepository();
+  await repository.resetDemo();
+  const auth: AuthContextValue = {
+    accountService: createDemoAccountService(),
+    requestOtp: async () => undefined,
+    signOut: async () => undefined,
+    state: { status: 'demo' },
+    verifyOtp: async (email) => ({ email, id: 'demo' }),
+  };
+  const onOpenLegal = jest.fn();
+  const user = userEvent.setup();
+  await render(
+    <AuthContext.Provider value={auth}>
+      <PremiumProvider authState={auth.state} deployment="demo" service={createDemoPremiumService()}>
+        <KinProvider repository={repository}>
+          <ProfileScreen
+            onOpenKinPlus={jest.fn()}
+            onOpenLegal={onOpenLegal}
+            onSignedOut={jest.fn()}
+          />
+        </KinProvider>
+      </PremiumProvider>
+    </AuthContext.Provider>,
+  );
+
+  for (const [name, id] of [
+    ['Privacy Policy', 'privacy'],
+    ['Terms of Use', 'terms'],
+    ['Community Standards', 'community-standards'],
+    ['Support', 'support'],
+  ] as const) {
+    await user.press(await screen.findByRole('link', { name }));
+    expect(onOpenLegal).toHaveBeenLastCalledWith(id);
+  }
 });

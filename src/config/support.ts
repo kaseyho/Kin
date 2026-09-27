@@ -23,6 +23,6 @@ export function readPublicSupportEmail(): string {
     ?? DEFAULT_KIN_SUPPORT_EMAIL;
 }
 
-export function createSupportMailto(supportEmail: string): string {
-  return `mailto:${supportEmail}?subject=${encodeURIComponent('Kin support')}`;
+export function createSupportMailto(supportEmail: string, subject = 'Kin support'): string {
+  return `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}`;
 }

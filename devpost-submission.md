@@ -99,7 +99,7 @@ npm run verify:ci
 npm run e2e
 ```
 
-The current release gate passes 66 Jest suites / 337 app tests, 33 Edge Function tests, 11 Playwright journeys, TypeScript, lint, web export, production bundle isolation, and a production dependency policy with 0 high and 0 critical advisories. Expo Doctor passes all 21 checks.
+The current release gate passes 67 Jest suites / 340 app tests, 36 Edge Function and operator-tool tests, 14 Playwright journeys across demo and signed-out connected builds, TypeScript, lint, web export, production bundle isolation, and a production dependency policy with 0 high and 0 critical advisories. Expo Doctor passes all 21 checks.
 
 ## Public Demo Link
 
@@ -151,6 +151,7 @@ The required 1024×1024 uncropped icon is `assets/brand/app-icon.png`. The scree
 - Production Supabase project with eight migrations, 17 RLS-enabled public tables, private Storage, five active Edge Functions, and two autonomously verified scheduled workers.
 - EAS project and native build profiles.
 - Green CI-equivalent and browser verification on the branded release.
+- Public Privacy Policy, Terms of Use, Community Standards, Support, and account-deletion routes, including a verified external deletion-request operations path.
 - Devpost account authenticated, event registration present, rules acknowledged, and an existing untitled pre-draft found for RevenueCat Shipaton 2026.
 
 ### Required before final entry

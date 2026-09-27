@@ -5,10 +5,12 @@ import { createSupportMailto, normalizeSupportEmail } from '@/config/support';
 import { colors, radii, spacing } from '@/design/tokens';
 
 interface SupportLinkProps {
+  label?: string;
+  subject?: string;
   supportEmail: string;
 }
 
-export function SupportLink({ supportEmail }: SupportLinkProps) {
+export function SupportLink({ label = 'Email Kin support', subject = 'Kin support', supportEmail }: SupportLinkProps) {
   const [error, setError] = useState('');
   const reachableEmail = normalizeSupportEmail(supportEmail);
 
@@ -25,7 +27,7 @@ export function SupportLink({ supportEmail }: SupportLinkProps) {
   async function openSupport() {
     setError('');
     try {
-      await Linking.openURL(createSupportMailto(verifiedEmail));
+      await Linking.openURL(createSupportMailto(verifiedEmail, subject));
     } catch {
       setError(`Kin could not open your email app. Write to ${verifiedEmail}.`);
     }
@@ -34,12 +36,12 @@ export function SupportLink({ supportEmail }: SupportLinkProps) {
   return (
     <View>
       <Pressable
-        accessibilityLabel={`Email Kin support at ${verifiedEmail}`}
+        accessibilityLabel={`${label} at ${verifiedEmail}`}
         accessibilityRole="link"
         onPress={() => void openSupport()}
         style={({ pressed }) => [styles.link, pressed && styles.pressed]}
       >
-        <Text style={styles.linkLabel}>Email Kin support</Text>
+        <Text style={styles.linkLabel}>{label}</Text>
         <Text selectable style={styles.email}>{verifiedEmail}</Text>
       </Pressable>
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}

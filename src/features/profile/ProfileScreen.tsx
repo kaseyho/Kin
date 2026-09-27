@@ -11,13 +11,15 @@ import { useKin } from '@/state/useKin';
 import { AccountActions } from './AccountActions';
 import { EditProfileSheet } from './EditProfileSheet';
 import { NotificationSettings } from '@/features/notifications/NotificationSettings';
+import type { LegalDocumentId } from '@/features/legal/legalDocuments';
 
 interface ProfileScreenProps {
   onOpenKinPlus: () => void;
+  onOpenLegal: (documentId: LegalDocumentId) => void;
   onSignedOut: () => void;
 }
 
-export function ProfileScreen({ onOpenKinPlus, onSignedOut }: ProfileScreenProps) {
+export function ProfileScreen({ onOpenKinPlus, onOpenLegal, onSignedOut }: ProfileScreenProps) {
   const auth = useAuth();
   const kin = useKin();
   const premium = usePremiumGate();
@@ -125,6 +127,17 @@ export function ProfileScreen({ onOpenKinPlus, onSignedOut }: ProfileScreenProps
           <SupportLink supportEmail={readPublicSupportEmail()} />
         </View>
 
+        <View style={styles.section}>
+          <Text style={styles.label}>LEGAL & SUPPORT</Text>
+          <Text style={styles.sectionTitle}>Your rights and Kin’s commitments</Text>
+          <View style={styles.legalLinks}>
+            <LegalLink label="Privacy Policy" onPress={() => onOpenLegal('privacy')} />
+            <LegalLink label="Terms of Use" onPress={() => onOpenLegal('terms')} />
+            <LegalLink label="Community Standards" onPress={() => onOpenLegal('community-standards')} />
+            <LegalLink label="Support" onPress={() => onOpenLegal('support')} />
+          </View>
+        </View>
+
         <AccountActions
           accountEmail={accountEmail}
           mode={kin.mode}
@@ -151,6 +164,20 @@ export function ProfileScreen({ onOpenKinPlus, onSignedOut }: ProfileScreenProps
   );
 }
 
+function LegalLink({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="link"
+      onPress={onPress}
+      style={({ pressed }) => [styles.legalLink, pressed && styles.pressed]}
+    >
+      <Text style={styles.legalLinkLabel}>{label}</Text>
+      <Text accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.legalChevron}>›</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   content: { padding: spacing.xl, paddingBottom: 100 },
   copy: { color: colors.mutedInk, fontFamily: typography.body, fontSize: 14, lineHeight: 21, marginTop: spacing.sm },
@@ -160,6 +187,10 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: 13, lineHeight: 19, marginTop: spacing.md },
   identityRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   label: { color: colors.rose, fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
+  legalChevron: { color: colors.rose, fontSize: 22 },
+  legalLink: { alignItems: 'center', borderBottomColor: colors.keyline, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', minHeight: 52 },
+  legalLinkLabel: { color: colors.plumInk, fontFamily: typography.bodyStrong, fontSize: 14 },
+  legalLinks: { marginTop: spacing.md },
   name: { color: colors.mutedInk, fontSize: 15, marginTop: spacing.xs },
   plus: { backgroundColor: colors.plumInk, borderRadius: radii.lg, marginTop: spacing.xl, padding: spacing.xl },
   plusMark: { color: '#E8A6B9', fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },

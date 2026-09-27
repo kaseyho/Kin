@@ -4,6 +4,9 @@ describe('support configuration', () => {
   it('accepts reachable-looking addresses and builds a safe mail link', () => {
     expect(normalizeSupportEmail(' Help@Kin-App.com ')).toBe('help@kin-app.com');
     expect(createSupportMailto('help@kin-app.com')).toBe('mailto:help@kin-app.com?subject=Kin%20support');
+    expect(createSupportMailto('help@kin-app.com', 'Delete my Kin account')).toBe(
+      'mailto:help@kin-app.com?subject=Delete%20my%20Kin%20account',
+    );
   });
 
   it.each([

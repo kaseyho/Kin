@@ -74,7 +74,7 @@ describe('RelationshipPanel', () => {
     };
     const profile = await renderKin(
       <AuthContext.Provider value={auth}>
-        <ProfileScreen onOpenKinPlus={jest.fn()} onSignedOut={jest.fn()} />
+        <ProfileScreen onOpenKinPlus={jest.fn()} onOpenLegal={jest.fn()} onSignedOut={jest.fn()} />
       </AuthContext.Provider>,
       repository,
     );
