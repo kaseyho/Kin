@@ -20,6 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     name: 'Kin',
     slug: 'kin',
     owner: 'moondrunk',
+    icon: './assets/brand/app-icon.png',
     scheme: 'kin',
     version: '1.0.0',
     orientation: 'portrait',
@@ -34,6 +35,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       ...config.android,
+      adaptiveIcon: {
+        ...config.android?.adaptiveIcon,
+        backgroundColor: '#F8F3ED',
+        foregroundImage: './assets/brand/adaptive-icon.png',
+        monochromeImage: './assets/brand/monochrome-icon.png',
+      },
       ...(verifiedWebDomain
         ? {
             intentFilters: [
@@ -52,10 +59,20 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     web: {
       ...config.web,
       bundler: 'metro',
+      favicon: './assets/brand/favicon.png',
       output: 'single',
     },
     plugins: [
       'expo-router',
+      [
+        'expo-splash-screen',
+        {
+          backgroundColor: '#F8F3ED',
+          image: './assets/brand/splash-icon.png',
+          imageWidth: 188,
+          resizeMode: 'contain',
+        },
+      ],
       'expo-notifications',
       [
         'expo-image-picker',

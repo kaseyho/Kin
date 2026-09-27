@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Kin folded-ribbon mark</title>
+  <desc id="desc">A plum and rose K woven from two paper ribbons with a small heart-shaped opening.</desc>
+  <defs>
+    <mask id="heart-cut">
+      <rect width="1024" height="1024" fill="#fff" />
+      <path
+        fill="#000"
+        d="M438 550 393 507c-25-24-8-62 23-62 14 0 27 8 35 20 8-12 21-20 35-20 31 0 48 38 23 62l-45 43c-7 7-19 7-26 0Z"
+      />
+    </mask>
+  </defs>
+  <g mask="url(#heart-cut)">
+    <path
+      d="M390 488 675 226"
+      fill="none"
+      stroke="#A64B68"
+      stroke-linecap="round"
+      stroke-width="164"
+    />
+    <rect x="230" y="190" width="184" height="644" rx="92" fill="#2F232B" />
+    <path
+      d="m390 536 285 262"
+      fill="none"
+      stroke="#A64B68"
+      stroke-linecap="round"
+      stroke-width="164"
+    />
+  </g>
+</svg>
