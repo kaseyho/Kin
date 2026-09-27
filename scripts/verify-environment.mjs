@@ -1,8 +1,16 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const expoCli = fileURLToPath(new URL('../node_modules/expo/bin/cli', import.meta.url));
+const easConfig = JSON.parse(readFileSync(new URL('../eas.json', import.meta.url), 'utf8'));
+
+assert.deepEqual(easConfig.build?.demo, {
+  distribution: 'internal',
+  environment: 'development',
+  env: { EXPO_PUBLIC_KIN_ENVIRONMENT: 'demo' },
+});
 
 const demo = readExpoConfig({
   EXPO_PUBLIC_KIN_ENVIRONMENT: 'demo',

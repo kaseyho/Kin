@@ -4,6 +4,13 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "demo": {
+      "distribution": "internal",
+      "environment": "development",
+      "env": {
+        "EXPO_PUBLIC_KIN_ENVIRONMENT": "demo"
+      }
+    },
     "development": {
       "developmentClient": true,
       "distribution": "internal",

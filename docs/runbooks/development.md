@@ -141,6 +141,7 @@ Expo generates `expo-env.d.ts`; it is intentionally ignored. `.expo/`, `dist/`, 
 
 `eas.json` defines:
 
+- `demo` — credential-free internal distribution for physical-device demos and hackathon recording;
 - `development` — development client and internal distribution;
 - `preview` — internal staging build;
 - `production` — store build with remote app-version management and auto-increment;
@@ -189,6 +190,20 @@ Requires the real EAS project plus iOS/Android signing and push credentials:
 
 ```bash
 npx eas-cli@latest build --profile development --platform all
+```
+
+### Credential-free Android demo build
+
+The `demo` profile produces an internally distributed Android artifact with the labelled Maya and
+Jamie story and simulated Kin+ checkout. It is suitable for physical-device UI validation and the
+hackathon demo video, but it is not consumer production evidence and never connects to Supabase or
+RevenueCat:
+
+```bash
+EXPO_PUBLIC_KIN_ENVIRONMENT=demo npx eas-cli@latest build \
+  --profile demo \
+  --platform android \
+  --non-interactive
 ```
 
 ### Production builds and submission
