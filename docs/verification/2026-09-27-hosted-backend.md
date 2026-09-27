@@ -54,6 +54,35 @@ Generated high-entropy cleanup, notification, webhook authorization, and webhook
 stored in Supabase Edge Function secrets and the developer's macOS Keychain. The RevenueCat secret
 API key remains intentionally unset until the RevenueCat project is connected.
 
+## Scheduled worker proof
+
+Supabase Cron (`pg_cron`) and asynchronous networking (`pg_net`) are enabled. Vault contains the
+project URL, public API key, and the two dedicated worker secrets under named entries; no decrypted
+value is recorded here. Two active jobs run every five minutes:
+
+- `kin-storage-cleanup`
+- `kin-message-notifications`
+
+An authenticated direct production invocation returned HTTP 200 for both workers. Storage cleanup
+claimed zero jobs with zero failures and completed both retention purges. Message notifications
+claimed zero jobs with zero failures and recorded a successful empty-queue heartbeat.
+
+The first autonomous schedule boundary was observed at `2026-09-27T02:25:00Z`. Both Cron ledger
+entries reported `succeeded`; both asynchronous HTTP responses were 200 with no timeout or error;
+and both maintenance rows recorded `succeeded`, zero claimed jobs, and zero failures. This proves the
+deployed scheduler-to-function path independently of the direct smoke call.
+
+## Auth configuration proof
+
+Hosted Auth has email signup enabled, email confirmation required, anonymous users disabled,
+unverified-email sign-in disabled, and secure email change enabled. The project initially emitted
+eight-digit email OTPs while the Kin client deliberately accepts six digits; the hosted setting was
+corrected to six and read back through the authenticated Management API.
+
+Custom SMTP is not configured, and the Auth site URL is still the Supabase default localhost URL
+with no production redirect allow-list. Those remain release gates until the public production URL
+and sender domain are selected.
+
 ## Build environment proof
 
 EAS project `@moondrunk/kin` has the hosted Supabase URL and publishable key configured for both
@@ -71,6 +100,7 @@ functions remain revoked from authenticated clients.
 
 ## Remaining hosted gates
 
-This deployment does not prove store billing, webhook reconciliation, SMTP deliverability, native
-push delivery, scheduled worker invocation, or physical-device behavior. Those require RevenueCat,
-store, mail, push, scheduler, and device configuration and remain open release gates.
+This deployment does not prove store billing, webhook reconciliation, custom SMTP deliverability,
+native push delivery, or physical-device behavior. The production Auth site URL and redirect
+allow-list also remain unset. Those require RevenueCat, store, mail, public-hosting, push, and device
+configuration and remain open release gates.
