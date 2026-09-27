@@ -59,14 +59,22 @@ RevenueCat's primary documentation was rechecked on 2026-09-27:
 - [Customer Info model](https://production-docs.revenuecat.com/docs/api-v1/customer-info-model)
   confirms the server response fields used for entitlement, expiry, store, and sandbox mapping.
 
-## Hosted staging release blocker
+## Hosted provider release gate
 
-Status: **not yet executed; production billing is not release-approved.**
+Status: **backend deployed; production billing is not release-approved.**
 
-The following evidence requires a configured staging Supabase project, a RevenueCat sandbox/Test
-Store project, App Store Connect and Google Play sandbox products, two controlled Supabase accounts,
-and physical iOS and Android devices in addition to web. Record only build IDs, coarse RevenueCat
-event IDs, Supabase function request IDs, timestamps, platform, and pass/fail.
+Supabase production project `pmbygfrnervzgprympeq` now has all eight migrations, the private
+entitlement/event tables, generated webhook authentication and signing secrets, and the active
+`revenuecat-webhook` function. EAS preview and production environments contain the public Supabase
+URL and publishable key. The RevenueCat server API key, project/offering/products, store products,
+sandbox receipts, and device evidence are still missing, so no purchase or entitlement lifecycle
+claim has been made. Hosted backend proof is recorded in
+[`2026-09-27-hosted-backend.md`](2026-09-27-hosted-backend.md).
+
+The following evidence requires a configured RevenueCat sandbox/Test Store project, App Store
+Connect and Google Play sandbox products, two controlled Supabase accounts, and physical iOS and
+Android devices in addition to web. Record only build IDs, coarse RevenueCat event IDs, Supabase
+function request IDs, timestamps, platform, and pass/fail.
 
 1. Prove the same Supabase UUID is the RevenueCat App User ID on iOS, Android, and web.
 2. Verify dashboard monthly/annual/web packages and localized store terms.

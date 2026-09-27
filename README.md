@@ -83,7 +83,13 @@ supabase db reset
 supabase test db
 ```
 
-The migration creates profiles, Kin Spaces, membership, themes, messages, reactions, Memories, source-message links, expiring invites, private storage buckets, Realtime publication entries, and RLS on every app table. Shared rows require Space membership; private Memories additionally require creator ownership. Invite redemption runs through a fixed-search-path security-definer function.
+The production backend is deployed to Supabase project `pmbygfrnervzgprympeq` in Singapore. Its
+eight migrations, 17 public tables, private Storage buckets, RLS posture, and five active Edge
+Functions were inspected after deployment. See
+[`docs/verification/2026-09-27-hosted-backend.md`](docs/verification/2026-09-27-hosted-backend.md)
+for the exact evidence and remaining provider gates.
+
+The migrations create profiles, Kin Spaces, membership, themes, messages, reactions, Memories, source-message links, expiring invites, private storage buckets, Realtime publication entries, and RLS on every app table. Shared rows require Space membership; private Memories additionally require creator ownership. Invite redemption runs through a fixed-search-path security-definer function.
 
 ## Kin+ and RevenueCat
 
@@ -109,10 +115,9 @@ The bundled Maya and Jamie portraits, first-date photograph, letterpress wallpap
 
 The local suite proves the domain rules, repository selection, persistence behavior, UI flows, recovery states, responsive web layout, web-safe native-module boundaries, and production web bundling. The SQL file includes executable RLS assertions, but those assertions require a running local Supabase stack or a configured project.
 
-The following are **not externally verified by the repository alone**:
+The following are **not yet externally verified end to end**:
 
-- a real hosted Supabase project’s Realtime delivery and private storage behavior;
-- execution of the RLS test against that project or a running local Docker stack;
+- cross-account Realtime delivery and private Storage access through the hosted consumer client;
 - configured App Store / Play products and RevenueCat offering metadata;
 - real purchase, cancellation, renewal, and restore receipts;
 - native iOS/Android builds, permissions, notifications, and physical-device behavior.

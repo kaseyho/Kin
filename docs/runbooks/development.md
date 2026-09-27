@@ -168,15 +168,20 @@ smoke, and durable Storage cleanup retry.
 
 ### Hosted Supabase
 
-Requires Supabase CLI authentication and the intended project reference:
+The production project is `Kin Production` (`pmbygfrnervzgprympeq`, Singapore). Authenticate and
+link only that explicit target:
 
 ```bash
 supabase login
-supabase link --project-ref YOUR_PROJECT_REF
+supabase link --project-ref pmbygfrnervzgprympeq
 supabase db push
 ```
 
 Do not run `db push` against production until migrations and RLS tests pass locally and a backup exists.
+The initial 2026-09-27 deployment used Supabase's authenticated transactional Management API because
+CLI 2.117.0 and 2.118.0 both stalled while creating a temporary passwordless login role on this
+machine. The remote ledger was aligned to the checked-in migration versions afterward. See
+`docs/verification/2026-09-27-hosted-backend.md`; do not manually reapply those migrations.
 
 ### Native development builds
 
