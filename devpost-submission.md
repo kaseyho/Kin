@@ -99,7 +99,7 @@ npm run verify:ci
 npm run e2e
 ```
 
-The current release gate passes 67 Jest suites / 340 app tests, 36 Edge Function and operator-tool tests, 14 Playwright journeys across demo and signed-out connected builds, TypeScript, lint, web export, production bundle isolation, and a production dependency policy with 0 high and 0 critical advisories. Expo Doctor passes all 21 checks.
+The current release gate passes 67 Jest suites / 340 app tests, 36 Edge Function and operator-tool tests, 14 Playwright journeys across demo and signed-out connected builds, TypeScript, lint, web export, production bundle isolation, and a production dependency policy with 0 high and 0 critical advisories. Expo Doctor passes all 21 checks. EAS also completed an internal Android demo APK from commit `0360804`; the build record is [`15c01a0b-e419-4023-ab16-9dab5e5c8864`](https://expo.dev/accounts/moondrunk/projects/kin/builds/15c01a0b-e419-4023-ab16-9dab5e5c8864).
 
 ## Public Demo Link
 
@@ -149,25 +149,25 @@ The required 1024×1024 uncropped icon is `assets/brand/app-icon.png`. The scree
 - Original 1024×1024 store icon plus iOS/Android/web splash and icon variants.
 - Five visually reviewed, frameless 1179×2556 screenshot candidates.
 - Production Supabase project with eight migrations, 17 RLS-enabled public tables, private Storage, five active Edge Functions, and two autonomously verified scheduled workers.
-- EAS project and native build profiles.
+- EAS project, native build profiles, and a completed internal Android demo APK tied to commit `0360804`.
 - Green CI-equivalent and browser verification on the branded release.
 - Public Privacy Policy, Terms of Use, Community Standards, Support, and account-deletion routes, including a verified external deletion-request operations path.
 - Devpost account authenticated, event registration present, rules acknowledged, and an existing untitled pre-draft found for RevenueCat Shipaton 2026.
 
 ### Required before final entry
 
-- Configure the RevenueCat project, `kin_plus` entitlement, `default` offering, monthly/annual products, public SDK keys, server API key, and production webhook.
+- Finish the partially configured RevenueCat project: `kin_plus`, `default`, Test Store products, Android app, and the safe restore policy now exist; store credentials, production products, public-key deployment, the server API key, and production webhook remain.
 - Configure a judge-accessible free trial or promo code; a seven-day free trial is recommended.
 - Complete and record a real sandbox purchase and restore on the target native device.
-- Produce a signed iOS or Android build and perform physical-device checks for purchase, notifications, permissions, deep links, and private media.
+- Produce a connected signed iOS or Android build and perform physical-device checks for purchase, notifications, permissions, deep links, and private media. The completed Android demo APK proves the build pipeline only.
 - Record and publicly upload the final device demo to YouTube or Vimeo.
 - Confirm the Next Gen student email and target categories.
 - Add production support email, Auth SMTP sender, final public URL/redirects, and any store metadata needed for the chosen release path.
 
 ## Known Limitations
 
-- The public demo intentionally simulates billing; the live RevenueCat dashboard and store/Test Store configuration are not complete yet.
-- Native build, physical-device, push-delivery, and real receipt evidence remain open release gates.
+- The public demo intentionally simulates billing. RevenueCat now has the required `kin_plus` entitlement, `default` offering, Test Store products, Android app configuration, and safe restore policy, but store credentials, webhook/API secrets, and real receipt proof remain incomplete.
+- A signed internal Android demo APK now exists; physical-device, connected native build, push-delivery, and real receipt evidence remain open release gates.
 - Hosted Auth still needs a production support email, custom SMTP, and final redirect configuration before consumer signup should be opened broadly.
 - Group Kin Spaces, voice/video calls, message import, and automatic AI memory suggestions are explicitly out of scope for this focused first release.
 
@@ -186,7 +186,7 @@ Official requirements fetched live from Devpost on 2026-09-27.
 | Next Gen code repository | <https://github.com/kaseyho/Kin> |
 | Next Gen student/academic email | TODO — user must provide and confirm the academic email. |
 | Minor entrant consent | TODO — confirm no minor entrant, or complete the official guardian form if applicable. |
-| RevenueCat project ID (required) | TODO — copy from RevenueCat Project Settings after project setup. |
+| RevenueCat project ID (required) | `projc87474b5` |
 | Premium judge access | TODO — configure a free trial or provide a promo code. |
 | RevenueCat Design Award | Kin combines warm editorial typography, parchment-like relationship surfaces, relationship-specific themes, and a layered conversation-to-memory interaction. The design makes the emotional hierarchy visible: messages feel familiar, while Moments and timelines feel archival and intentionally kept. Interaction states remain explicit and accessible across phone and wide layouts. |
 | RevenueCat Peace Prize | Kin is designed to help people preserve and revisit meaningful history with partners, close friends, and family without ads, public performance, relationship scoring, or selling intimate data. It gives distant families and busy relationships a private place to remember what was said, planned, and celebrated. |
