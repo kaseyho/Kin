@@ -16,12 +16,26 @@ be recorded here.
 | Test Store products | `monthly`, `yearly`, and `lifetime`; each is attached to `kin_plus` |
 | Android app | `Kin (Play Store)`, REST ID `app80bdbc7ec4`, package `com.kaseyho.kin` |
 | Android SDK key | A platform-specific `goog_` public key exists; its value is intentionally not recorded |
+| EAS public billing values | Preview has the Test Store Android key; production has the Google Android key; both values are stored as sensitive EAS variables |
 | Restore behavior | `Transfer if there are no active subscriptions`, with no separate sandbox override |
 | Sandbox access | Anybody may receive Test Store entitlements while the release gate is being exercised |
+| Server API key | A dedicated RevenueCat v1 key named `Kin Supabase webhook` is stored in macOS Keychain and the Supabase production secret store |
+| Production webhook | `Kin production` (`whintgrfd8bbd1178`) targets the hosted Supabase Edge Function, sends production events only, and has HMAC signing enabled |
 
-The onboarding flow also created a legacy `kin` entitlement attached to the same Test Store
-products. The app and webhook intentionally read only `kin_plus`; removal of the legacy entitlement
-is a separate destructive dashboard action and has not been performed without explicit approval.
+The onboarding flow's unused legacy `kin` entitlement was detached from its three products and
+permanently deleted after explicit approval. `kin_plus` remains the only entitlement and retains all
+three Test Store products.
+
+The production webhook includes `INITIAL_PURCHASE`, `RENEWAL`, `PRODUCT_CHANGE`, `CANCELLATION`,
+`BILLING_ISSUE`, `NON_RENEWING_PURCHASE`, `UNCANCELLATION`, `SUBSCRIPTION_PAUSED`, `EXPIRATION`,
+`SUBSCRIPTION_EXTENDED`, `INVOICE_ISSUANCE`, and `REFUND_REVERSED`. Transfer, temporary grants,
+virtual-currency, experiment, and purchase-redemption events remain excluded by design. Its exact
+authorization value and one-time HMAC secret are stored only in macOS Keychain and Supabase.
+
+After secret rotation, `revenuecat-webhook` was redeployed as active version 5. A correctly
+authorized and signed request to the hosted endpoint reached schema validation and returned the
+expected `400 event_invalid` response for the intentionally incomplete `{}` body. This proves the
+deployed authorization and HMAC path without creating or recording a customer event.
 
 ## Open provider gates
 
@@ -31,9 +45,8 @@ is a separate destructive dashboard action and has not been performed without ex
 - The App Store app cannot be saved until the App Store Connect in-app-purchase `.p8` key, Key ID,
   and Issuer ID are supplied.
 - RevenueCat Web Billing has no provider because Stripe is not connected.
-- The webhook form is prepared but not submitted. Completing it requires transmitting the existing
-  webhook authorization value to RevenueCat, enabling HMAC signing, retaining the generated signing
-  secret, and creating or supplying a RevenueCat v1 secret API key for the Supabase function.
+- Sandbox purchases still need a separate staging webhook and backend; the production webhook
+  intentionally excludes sandbox events rather than mixing test and consumer data.
 - A real sandbox purchase, restore, entitlement projection, and physical-device run remain required
   before production billing can be approved.
 

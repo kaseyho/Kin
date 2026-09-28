@@ -152,23 +152,27 @@ The required 1024×1024 uncropped icon is `assets/brand/app-icon.png`. The scree
 - EAS project, native build profiles, and a completed internal Android demo APK tied to commit `0360804`.
 - Green CI-equivalent and browser verification on the branded release.
 - Public Privacy Policy, Terms of Use, Community Standards, Support, and account-deletion routes, including a verified external deletion-request operations path.
+- Public support now resolves to `kaseyho.work@gmail.com` on the stable demo deployment; production deployment `dpl_8fNrPmSEH95gDQQt11fhP8Nc893u` is `READY` and the root, support, and nested Space routes return HTTP 200.
+- RevenueCat now has one required `kin_plus` entitlement, a production-only HMAC-signed webhook, a dedicated v1 server key, and preview/production Android public keys in EAS. The hosted signed-request smoke reached the deployed webhook's expected schema-validation boundary.
 - Devpost account authenticated, event registration present, rules acknowledged, and an existing untitled pre-draft found for RevenueCat Shipaton 2026.
 
 ### Required before final entry
 
-- Finish the partially configured RevenueCat project: `kin_plus`, `default`, Test Store products, Android app, and the safe restore policy now exist; store credentials, production products, public-key deployment, the server API key, and production webhook remain.
+- Confirm the RevenueCat account email from the inbox.
+- Add the Google Play service-account JSON and create the real Play subscription/base-plan products. Add Apple and Web Billing credentials only if those platforms will be claimed in the final submission.
+- Create an isolated staging Supabase project and sandbox-only RevenueCat webhook before recording the real Test Store purchase; do not route sandbox events into the production backend.
 - Configure a judge-accessible free trial or promo code; a seven-day free trial is recommended.
 - Complete and record a real sandbox purchase and restore on the target native device.
 - Produce a connected signed iOS or Android build and perform physical-device checks for purchase, notifications, permissions, deep links, and private media. The completed Android demo APK proves the build pipeline only.
 - Record and publicly upload the final device demo to YouTube or Vimeo.
 - Confirm the Next Gen student email and target categories.
-- Add production support email, Auth SMTP sender, final public URL/redirects, and any store metadata needed for the chosen release path.
+- Add the Auth SMTP sender, final connected-web URL/redirects, and any store metadata needed for the chosen release path. The current Vercel URL is an intentionally credential-free demo, not the connected consumer web app.
 
 ## Known Limitations
 
-- The public demo intentionally simulates billing. RevenueCat now has the required `kin_plus` entitlement, `default` offering, Test Store products, Android app configuration, and safe restore policy, but store credentials, webhook/API secrets, and real receipt proof remain incomplete.
+- The public demo intentionally simulates billing. RevenueCat's production webhook, server key, public Android keys, entitlement, offering, and Test Store products are configured, but store credentials and real receipt proof remain incomplete.
 - A signed internal Android demo APK now exists; physical-device, connected native build, push-delivery, and real receipt evidence remain open release gates.
-- Hosted Auth still needs a production support email, custom SMTP, and final redirect configuration before consumer signup should be opened broadly.
+- Hosted Auth still needs a custom SMTP sender and final redirect configuration before consumer signup should be opened broadly.
 - Group Kin Spaces, voice/video calls, message import, and automatic AI memory suggestions are explicitly out of scope for this focused first release.
 
 ## TODO Official Form Fields
