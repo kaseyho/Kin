@@ -21,7 +21,8 @@
   "current_stage": "prepare-submission",
   "completed_stages": [
     "start-hackathon",
-    "review"
+    "review",
+    "prepare-submission"
   ],
   "rules_acknowledged": true,
   "learning": {
@@ -35,5 +36,5 @@
     "draft_file": "devpost-submission.md",
     "status": "drafting"
   },
-  "next_command": "prepare-submission"
+  "next_command": "submit-project"
 }
