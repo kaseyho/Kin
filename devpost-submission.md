@@ -103,8 +103,9 @@ The current release gate passes 67 Jest suites / 340 app tests, 36 Edge Function
 
 EAS also completed the connected Android staging APK from commit `a946b3b`; the build record is
 [`5566bd53-578b-4198-b069-d3d4f3fc9f60`](https://expo.dev/accounts/moondrunk/projects/kin/builds/5566bd53-578b-4198-b069-d3d4f3fc9f60).
-It uses isolated staging Supabase plus RevenueCat Test Store and is the build for the final
-physical-device purchase and restore proof.
+It uses isolated staging Supabase and proves the connected release bundle builds successfully. It
+must not be used for Test Store checkout because RevenueCat intentionally restricts Test Store keys
+to debuggable apps. The separate judge APK described below is the correct Test Store build.
 
 ## Public Demo Link
 
@@ -120,11 +121,12 @@ The repository is public on the `main` branch. Local environment files and crede
 
 ## Demo Video
 
-**Public YouTube or Vimeo URL:** TODO — record and upload a final device demo, no longer than 2 minutes.
+**Public YouTube or Vimeo URL:** TODO — upload the verified local master.
 
-The approved word-for-word narration and synchronized shot list are in
-`docs/submission/shipaton-demo-video-script.md`. The silent app walkthrough has been captured; the
-remaining edit inputs are the talking-head recording and the short Android purchase/restore insert.
+The final local master is `output/video/kin-shipaton-final.mp4`: 1:46.2, 1920×1080, 30 fps, H.264
+video with 48 kHz AAC voice audio. It combines the talking-head recording, deterministic walkthrough,
+and a real RevenueCat Test Store purchase/restore captured in an Android 15 emulator. It passed a
+full decode check and visual review at the key transitions.
 
 ### 1:50 outline
 
@@ -133,13 +135,12 @@ remaining edit inputs are the talking-head recording and the short Android purch
 - **0:22–0:43 — Defining action:** choose **Remember this** and save **Our first date** as a Moment.
 - **0:43–0:59 — Payoff:** show the relationship view, **On This Day**, and timeline.
 - **0:59–1:12 — Expression:** preview the Moonlit relationship theme.
-- **1:12–1:31 — RevenueCat:** explain Kin+, then show the real Android Test Store active and restore states.
+- **1:12–1:31 — RevenueCat:** explain Kin+, then show the Android Test Store purchase, active, and restore states.
 - **1:31–1:44 — Build proof:** name Expo, Supabase, RevenueCat, Codex, and the verified test totals.
 - **1:44–1:50 — Close:** “Most messengers store messages. Kin remembers relationships.”
 
-Use only original visuals and voice, with no copyrighted music. The final edit combines the
-deterministic app walkthrough with the real target-device RevenueCat insert and stays ten seconds
-under the maximum duration.
+The edit uses only original visuals and voice, with no copyrighted music. It stays 13.8 seconds
+under the two-minute maximum.
 
 ## Screenshot Shot List
 
@@ -151,7 +152,7 @@ All current candidates are frameless PNGs at exactly 1179×2556:
 4. `output/playwright/screenshots/kin-devpost-timeline-1179x2556.png` — the chronological relationship timeline.
 5. `output/playwright/screenshots/kin-devpost-kin-plus-1179x2556.png` — the aligned Kin+ value proposition.
 
-The required 1024×1024 uncropped icon is `assets/brand/app-icon.png`. The screenshots were captured from the live Expo web demo at an iPhone-sized viewport; replace or supplement them with equivalent physical-device captures if the final native build renders differently.
+The required 1024×1024 uncropped icon is `assets/brand/app-icon.png`. The screenshots were captured from the live Expo web demo at an iPhone-sized viewport; the final video supplements them with native Android emulator footage.
 
 ## Submission Readiness Notes
 
@@ -169,17 +170,18 @@ The required 1024×1024 uncropped icon is `assets/brand/app-icon.png`. The scree
 - Isolated Supabase staging now has all eight migrations, 17 RLS-enabled public tables, five active functions, two autonomously verified workers, and a sandbox-only HMAC-signed RevenueCat webhook. EAS preview points only to staging and uses the Test Store key.
 - Connected Android staging build `5566bd53-578b-4198-b069-d3d4f3fc9f60` finished successfully and its downloaded APK passed archive-integrity verification.
 - RevenueCat account email confirmation is complete.
-- The participant confirmed on September 29 that the connected Android purchase, restore, and app acceptance checks are working. This is participant-reported device evidence; the final video still needs to capture the purchase/restore sequence.
+- RevenueCat Test Store purchase and restore were verified on an Android 15 arm64 emulator. The native UI showed **Kin+ is active** and **Kin+ restored**, and staging Supabase stored an active `kin_plus` entitlement from `test_store` for product `monthly`.
+- A standalone debuggable judge APK with an embedded JavaScript bundle is ready at `output/android/kin-judge-staging-debuggable.apk`. It cold-started with Metro stopped, reopened the active Kin+ state, and restored purchases without a fatal or provider-key error. This build is intentionally debuggable because RevenueCat Test Store rejects non-debuggable apps; it is not a production-store binary.
+- The final 1:46.2 demo master is ready at `output/video/kin-shipaton-final.mp4` and has passed codec, full-decode, loudness, and visual keyframe checks.
+- The participant confirmed on September 29 that the entry has no minor participant.
 - Devpost account authenticated, event registration present, rules acknowledged, and an existing untitled pre-draft found for RevenueCat Shipaton 2026.
 - Live Devpost requirements were refreshed on September 29. The deadline is September 30, 2026 at 11:45 PM Pacific Time (`2026-10-01T06:45:00Z`).
 
 ### Required before final entry
 
-- Record the confirmed Android Kin+ active and restore states for the final device demo.
-- State clearly that the supplied staging APK uses RevenueCat Test Store and unlocks Kin+ at no charge; no promo code is required for judges using that build.
-- Record and publicly upload the final device demo to YouTube or Vimeo.
-- Confirm that the entry has no minor participant, or complete the required guardian consent form.
-- Add the Auth SMTP sender, final connected-web URL/redirects, and any store metadata needed for the chosen release path. The current Vercel URL is an intentionally credential-free demo, not the connected consumer web app.
+- Review the final local video master, then publicly upload it to YouTube or Vimeo and add the URL.
+- Upload the standalone judge APK to a stable public download location if native judge access will be offered, and add that URL. State that it is a debuggable RevenueCat Test Store build, unlocks Kin+ at no charge, and is not a production-store binary.
+- Confirm **No** for the Devpost staff-or-sponsor field before final entry.
 
 ### Required only for a store-published entry
 
@@ -189,8 +191,9 @@ The required 1024×1024 uncropped icon is `assets/brand/app-icon.png`. The scree
 
 ## Known Limitations
 
-- The public demo intentionally simulates billing. RevenueCat's isolated production and sandbox webhooks, server key, public Android keys, entitlement, offering, and Test Store products are configured, but store credentials and real receipt proof remain incomplete.
-- Signed internal demo and connected staging Android APKs exist. The participant reports the physical-device checks passed; independent capture of the Android purchase/restore result and push-delivery evidence remain open release gates.
+- The public demo intentionally simulates billing. RevenueCat's isolated production and sandbox webhooks, server key, public Android keys, entitlement, offering, and Test Store products are configured, but Google Play credentials and real store-receipt proof remain incomplete.
+- Native purchase and restore were verified in an Android 15 emulator, not on a physical Android device. Push delivery still requires physical-device verification.
+- The EAS preview APK is a non-debuggable release-style build and therefore cannot use RevenueCat Test Store. Judges must use the standalone debuggable judge APK for no-charge Kin+ testing.
 - Hosted Auth still needs a custom SMTP sender and final redirect configuration before consumer signup should be opened broadly.
 - Group Kin Spaces, voice/video calls, message import, and automatic AI memory suggestions are explicitly out of scope for this focused first release.
 
@@ -208,14 +211,14 @@ Official requirements refreshed live from Devpost on 2026-09-29.
 | App Store / Google Play / Galaxy URL | Not required for the student Next Gen path; otherwise a published store URL is mandatory. |
 | Next Gen code repository | <https://github.com/kaseyho/Kin> |
 | Next Gen student/academic email | `e1511554@u.nus.edu` |
-| Minor entrant consent | TODO — confirm no minor entrant, or complete the official guardian form if applicable. |
+| Minor entrant consent | **No minor participant.** Confirmed by the participant on September 29, 2026; no guardian form is required. |
 | RevenueCat project ID (required) | `projc87474b5` |
-| Premium judge access | No code required in the supplied staging APK. RevenueCat Test Store unlocks Kin+ at no charge for the judge-access build. |
+| Premium judge access | No code or charge is required in the standalone debuggable judge APK. RevenueCat Test Store unlocks Kin+ for that build. Public APK download URL: TODO. |
 | RevenueCat Design Award | Kin combines warm editorial typography, parchment-like relationship surfaces, relationship-specific themes, and a layered conversation-to-memory interaction. The design makes the emotional hierarchy visible: messages feel familiar, while Moments and timelines feel archival and intentionally kept. Interaction states remain explicit and accessible across phone and wide layouts. |
 | RevenueCat Peace Prize | Kin is designed to help people preserve and revisit meaningful history with partners, close friends, and family without ads, public performance, relationship scoring, or selling intimate data. It gives distant families and busy relationships a private place to remember what was said, planned, and celebrated. |
 | HAMM Award | Leave blank. Kin has a coherent monetization model, but this entry makes no real-revenue or growth claim. |
 | Target categories | Next Gen Award, RevenueCat Design Award, and RevenueCat Peace Prize. |
-| Additional notes for judges | The public demo is deterministic and uses fictional data. The supplied Android staging build uses isolated Supabase data and RevenueCat Test Store, so judges can exercise Kin+ without a real charge. |
+| Additional notes for judges | The public demo is deterministic and uses fictional data. The standalone Android judge build uses isolated Supabase staging and RevenueCat Test Store, so judges can exercise Kin+ without a real charge. It is intentionally debuggable for Test Store compatibility and is not a production-store binary. |
 | Demo video URL (required) | TODO — public YouTube or Vimeo URL, at most two minutes. |
 
 The live Devpost form does not ask for a Codex session ID, so none is included.

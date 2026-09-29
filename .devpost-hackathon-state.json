@@ -9,14 +9,14 @@
     "source": "known"
   },
   "participant": {
-    "name": "",
-    "display_name": ""
+    "name": "Kasey Ho Kei Ching",
+    "display_name": "Kasey Ho"
   },
   "project": {
     "name": "Kin",
     "summary": "A relationship-first private messenger that helps people preserve, personalize, and rediscover meaningful moments together.",
-    "ai_usage": "",
-    "codex_usage": ""
+    "ai_usage": "AI was used as a development collaborator, not inside private relationship conversations. Kin keeps memory creation explicit and deterministic.",
+    "codex_usage": "Codex helped translate the PRD into the Expo, Supabase, and RevenueCat implementation; develop test-driven slices; review privacy and billing boundaries; verify deployments; and prepare the submission assets and demo."
   },
   "current_stage": "prepare-submission",
   "completed_stages": [

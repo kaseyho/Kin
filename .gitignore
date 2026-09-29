@@ -6,6 +6,7 @@ playwright-report/
 test-results/
 output/
 .playwright-cli/
+/Kin.mov
 .env
 .env.*
 !.env.example

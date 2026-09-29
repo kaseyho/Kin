@@ -4,6 +4,8 @@ Target length: **1 minute 50 seconds**
 Format: **1920×1080 landscape, 30 fps**  
 Delivery: natural and conversational; aim for roughly 135–145 words per minute
 
+Final edit status: **complete locally** at `output/video/kin-shipaton-final.mp4` (1:46.2).
+
 ## Recording setup
 
 - Record one continuous landscape talking-head clip.
@@ -61,13 +63,16 @@ Most messengers store messages. Kin remembers relationships.
 | 1:31–1:44 | Show a compact Expo + Supabase + RevenueCat + Codex verification slate. |
 | 1:44–1:50 | Return to the talking face for the closing line. |
 
-## Android insert to record
+## Android insert — captured and verified
 
-Record a separate **15–20 second portrait screen recording** on the tested staging APK:
+The final edit uses a portrait Android 15 emulator recording from the isolated staging environment:
 
 1. Open **Kin+** while signed in to the staging account.
-2. Show **Kin+ is active** after the RevenueCat Test Store purchase.
-3. Tap **Restore purchases**.
-4. Hold on the restored/active confirmation for two seconds.
+2. Select a real RevenueCat Test Store product and confirm **TEST VALID PURCHASE**.
+3. Show **Kin+ is active** after the purchase.
+4. Tap **Restore purchases** and hold on **Kin+ restored**.
 
 Do not open Profile, email, transaction details, RevenueCat customer information, or any screen that exposes a private identifier.
+
+Evidence: the staging Supabase projection recorded an active `kin_plus` entitlement from
+`test_store`, product `monthly`. The final insert contains no account email or provider identifier.
