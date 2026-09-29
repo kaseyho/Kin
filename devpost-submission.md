@@ -122,17 +122,24 @@ The repository is public on the `main` branch. Local environment files and crede
 
 **Public YouTube or Vimeo URL:** TODO — record and upload a final device demo, no longer than 2 minutes.
 
-### Two-minute outline
+The approved word-for-word narration and synchronized shot list are in
+`docs/submission/shipaton-demo-video-script.md`. The silent app walkthrough has been captured; the
+remaining edit inputs are the talking-head recording and the short Android purchase/restore insert.
 
-- **0:00–0:10 — Hook:** “Messaging apps help us talk, but the messages that matter disappear. Kin gives each close relationship a space of its own.”
-- **0:10–0:30 — Conversation:** open Jamie's Kin Space and show the personalized, familiar message flow.
-- **0:30–0:55 — Defining action:** open a meaningful message, choose **Remember this**, and save it as a Moment.
-- **0:55–1:20 — Payoff:** open the relationship view and timeline; show the source message, shared photo, important date, and On This Day behavior.
-- **1:20–1:38 — Expression:** show relationship-specific personalization and explain that every Space can feel different.
-- **1:38–1:55 — RevenueCat:** open Kin+, show monthly/annual terms and the free trial, complete or restore a sandbox purchase, and show premium themes/unlimited Moments becoming active.
-- **1:55–2:00 — Close:** “WhatsApp stores messages. Kin remembers relationships.”
+### 1:50 outline
 
-Record on the target iOS or Android device. Use only original visuals and voice; do not add copyrighted music. Keep every essential premium action inside the two-minute window.
+- **0:00–0:08 — Hook:** introduce Kin as a messenger designed to remember relationships.
+- **0:08–0:22 — Conversation:** open Jamie's private Kin Space.
+- **0:22–0:43 — Defining action:** choose **Remember this** and save **Our first date** as a Moment.
+- **0:43–0:59 — Payoff:** show the relationship view, **On This Day**, and timeline.
+- **0:59–1:12 — Expression:** preview the Moonlit relationship theme.
+- **1:12–1:31 — RevenueCat:** explain Kin+, then show the real Android Test Store active and restore states.
+- **1:31–1:44 — Build proof:** name Expo, Supabase, RevenueCat, Codex, and the verified test totals.
+- **1:44–1:50 — Close:** “Most messengers store messages. Kin remembers relationships.”
+
+Use only original visuals and voice, with no copyrighted music. The final edit combines the
+deterministic app walkthrough with the real target-device RevenueCat insert and stays ten seconds
+under the maximum duration.
 
 ## Screenshot Shot List
 
@@ -162,16 +169,16 @@ The required 1024×1024 uncropped icon is `assets/brand/app-icon.png`. The scree
 - Isolated Supabase staging now has all eight migrations, 17 RLS-enabled public tables, five active functions, two autonomously verified workers, and a sandbox-only HMAC-signed RevenueCat webhook. EAS preview points only to staging and uses the Test Store key.
 - Connected Android staging build `5566bd53-578b-4198-b069-d3d4f3fc9f60` finished successfully and its downloaded APK passed archive-integrity verification.
 - RevenueCat account email confirmation is complete.
+- The participant confirmed on September 29 that the connected Android purchase, restore, and app acceptance checks are working. This is participant-reported device evidence; the final video still needs to capture the purchase/restore sequence.
 - Devpost account authenticated, event registration present, rules acknowledged, and an existing untitled pre-draft found for RevenueCat Shipaton 2026.
 - Live Devpost requirements were refreshed on September 29. The deadline is September 30, 2026 at 11:45 PM Pacific Time (`2026-10-01T06:45:00Z`).
 
 ### Required before final entry
 
-- Configure a judge-accessible free trial or promo code; a seven-day free trial is recommended.
-- Complete and record a real sandbox purchase and restore on the target native device.
-- Install the completed connected Android build and perform physical-device checks for purchase, notifications, permissions, deep links, and private media.
+- Record the confirmed Android Kin+ active and restore states for the final device demo.
+- State clearly that the supplied staging APK uses RevenueCat Test Store and unlocks Kin+ at no charge; no promo code is required for judges using that build.
 - Record and publicly upload the final device demo to YouTube or Vimeo.
-- Confirm the Next Gen student email and target categories.
+- Confirm that the entry has no minor participant, or complete the required guardian consent form.
 - Add the Auth SMTP sender, final connected-web URL/redirects, and any store metadata needed for the chosen release path. The current Vercel URL is an intentionally credential-free demo, not the connected consumer web app.
 
 ### Required only for a store-published entry
@@ -183,7 +190,7 @@ The required 1024×1024 uncropped icon is `assets/brand/app-icon.png`. The scree
 ## Known Limitations
 
 - The public demo intentionally simulates billing. RevenueCat's isolated production and sandbox webhooks, server key, public Android keys, entitlement, offering, and Test Store products are configured, but store credentials and real receipt proof remain incomplete.
-- Signed internal demo and connected staging Android APKs exist; physical-device, push-delivery, and real receipt evidence remain open release gates.
+- Signed internal demo and connected staging Android APKs exist. The participant reports the physical-device checks passed; independent capture of the Android purchase/restore result and push-delivery evidence remain open release gates.
 - Hosted Auth still needs a custom SMTP sender and final redirect configuration before consumer signup should be opened broadly.
 - Group Kin Spaces, voice/video calls, message import, and automatic AI memory suggestions are explicitly out of scope for this focused first release.
 
@@ -195,19 +202,20 @@ Official requirements refreshed live from Devpost on 2026-09-29.
 | --- | --- |
 | Includes App Icon (required) | **Yes** after attaching `assets/brand/app-icon.png` (1024×1024). |
 | Includes screenshot (required) | **Yes** after attaching at least one listed 1179×2556 frameless screenshot. |
-| App type (required) | iOS and Android. |
+| App type (required) | Android. |
 | First Version Date Confirmation | Leave unchecked for the Next Gen path unless a store release lands by September 30, 2026. |
 | Is Staff or Sponsor | Confirm **No** before final entry. |
 | App Store / Google Play / Galaxy URL | Not required for the student Next Gen path; otherwise a published store URL is mandatory. |
 | Next Gen code repository | <https://github.com/kaseyho/Kin> |
-| Next Gen student/academic email | TODO — user must provide and confirm the academic email. |
+| Next Gen student/academic email | `e1511554@u.nus.edu` |
 | Minor entrant consent | TODO — confirm no minor entrant, or complete the official guardian form if applicable. |
 | RevenueCat project ID (required) | `projc87474b5` |
-| Premium judge access | TODO — configure a free trial or provide a promo code. |
+| Premium judge access | No code required in the supplied staging APK. RevenueCat Test Store unlocks Kin+ at no charge for the judge-access build. |
 | RevenueCat Design Award | Kin combines warm editorial typography, parchment-like relationship surfaces, relationship-specific themes, and a layered conversation-to-memory interaction. The design makes the emotional hierarchy visible: messages feel familiar, while Moments and timelines feel archival and intentionally kept. Interaction states remain explicit and accessible across phone and wide layouts. |
 | RevenueCat Peace Prize | Kin is designed to help people preserve and revisit meaningful history with partners, close friends, and family without ads, public performance, relationship scoring, or selling intimate data. It gives distant families and busy relationships a private place to remember what was said, planned, and celebrated. |
-| HAMM Award | Consider only after the live RevenueCat purchase gate passes. Kin+ monetizes deeper expression and preservation through premium themes and unlimited new Moments while leaving messaging and existing history free. |
-| Additional notes for judges | The public demo is deterministic and uses fictional data. The final video will demonstrate the native RevenueCat purchase or restore path on-device. |
+| HAMM Award | Leave blank. Kin has a coherent monetization model, but this entry makes no real-revenue or growth claim. |
+| Target categories | Next Gen Award, RevenueCat Design Award, and RevenueCat Peace Prize. |
+| Additional notes for judges | The public demo is deterministic and uses fictional data. The supplied Android staging build uses isolated Supabase data and RevenueCat Test Store, so judges can exercise Kin+ without a real charge. |
 | Demo video URL (required) | TODO — public YouTube or Vimeo URL, at most two minutes. |
 
 The live Devpost form does not ask for a Codex session ID, so none is included.
