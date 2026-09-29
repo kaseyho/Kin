@@ -22,7 +22,8 @@
   "completed_stages": [
     "start-hackathon",
     "review",
-    "prepare-submission"
+    "prepare-submission",
+    "submit-project"
   ],
   "rules_acknowledged": true,
   "learning": {
@@ -34,7 +35,9 @@
   },
   "submission": {
     "draft_file": "devpost-submission.md",
-    "status": "ready"
+    "status": "submitted",
+    "submission_id": 1180191,
+    "url": "https://devpost.com/software/kin-a-messenger-that-remembers-what-matters"
   },
-  "next_command": "submit-project"
+  "next_command": "hackathon-map"
 }

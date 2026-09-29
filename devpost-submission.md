@@ -2,6 +2,13 @@
 
 Kin — A Messenger That Remembers What Matters
 
+## Devpost Status
+
+Submitted to RevenueCat Shipaton 2026 and verified live on September 30, 2026.
+
+- Public project: <https://devpost.com/software/kin-a-messenger-that-remembers-what-matters>
+- Devpost submission ID: `1180191`
+
 ## One-line Summary
 
 A private relationship-first messenger that turns meaningful messages into Moments, shared timelines, and memories worth rediscovering.
@@ -177,13 +184,13 @@ The required 1024×1024 uncropped icon is `assets/brand/app-icon.png`. The scree
 - The participant confirmed on September 30 that they are not RevenueCat staff and not a hackathon sponsor.
 - The standalone judge APK is published at <https://github.com/kaseyho/Kin/releases/download/shipaton-2026-judge/kin-judge-staging-debuggable.apk>. The public release notes disclose the isolated staging backend, simulated no-charge Test Store purchases, intentional debuggability, minimum Android version, and SHA-256 digest.
 - The approved public demo video is published at <https://youtu.be/HWi-CvJgEjA>. YouTube confirmed the title, description, not-made-for-kids audience setting, and public publication.
-- Devpost account authenticated, event registration present, rules acknowledged, and an existing untitled pre-draft found for RevenueCat Shipaton 2026.
+- Devpost account authenticated, event registration present, rules acknowledged, and the Kin entry verified with a live submission timestamp for RevenueCat Shipaton 2026.
 - Live Devpost requirements were refreshed on September 29. The deadline is September 30, 2026 at 11:45 PM Pacific Time (`2026-10-01T06:45:00Z`).
 
-### Reserved for the final Devpost entry
+### Final Devpost entry completed
 
-- Transfer this reviewed packet into the Devpost draft, including the required icon, at least one frameless screenshot, the public video URL, Android app type, RevenueCat project ID, Next Gen repository and academic email, award answers, and judge-access note.
-- Review the resulting Devpost preview, then submit only after a separate explicit confirmation.
+- The public write-up, required app icon, five frameless screenshots, public video, Android app type, RevenueCat project ID, Next Gen repository and academic email, Design and Peace award answers, and judge-access note were added to the entry.
+- Devpost accepted the entry through its official submission endpoint, and a live readback confirmed the submitted timestamp and public project URL.
 
 ### Required only for a store-published entry
 
