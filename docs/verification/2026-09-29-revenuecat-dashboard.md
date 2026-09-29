@@ -19,8 +19,9 @@ be recorded here.
 | EAS public billing values | Preview has the Test Store Android key; production has the Google Android key; both values are stored as sensitive EAS variables |
 | Restore behavior | `Transfer if there are no active subscriptions`, with no separate sandbox override |
 | Sandbox access | Anybody may receive Test Store entitlements while the release gate is being exercised |
-| Server API key | A dedicated RevenueCat v1 key named `Kin Supabase webhook` is stored in macOS Keychain and the Supabase production secret store |
+| Server API key | A dedicated RevenueCat v1 key named `Kin Supabase webhook` is stored in macOS Keychain and both matching Supabase secret stores |
 | Production webhook | `Kin production` (`whintgrfd8bbd1178`) targets the hosted Supabase Edge Function, sends production events only, and has HMAC signing enabled |
+| Staging webhook | `Kin staging` (`whintgr165309bbec`) targets isolated staging, sends sandbox events only, and has HMAC signing enabled |
 
 The onboarding flow's unused legacy `kin` entitlement was detached from its three products and
 permanently deleted after explicit approval. `kin_plus` remains the only entitlement and retains all
@@ -37,16 +38,19 @@ authorized and signed request to the hosted endpoint reached schema validation a
 expected `400 event_invalid` response for the intentionally incomplete `{}` body. This proves the
 deployed authorization and HMAC path without creating or recording a customer event.
 
+The account email was confirmed and the warning banner no longer appears after a fresh dashboard
+reload. The staging webhook uses the same 12-event lifecycle filter and deliberately excludes the
+same reduced-identity event families as production. RevenueCat's signed synthetic `TEST` event
+reached staging and returned the expected `400 event_invalid`, proving the staging Authorization
+and HMAC boundary without creating a subscriber projection.
+
 ## Open provider gates
 
-- The RevenueCat account reports that its email address is not yet confirmed.
 - The Google Play app is missing the Play Console service-account JSON, so RevenueCat cannot yet
   validate real Play transactions or enable Google developer notifications.
 - The App Store app cannot be saved until the App Store Connect in-app-purchase `.p8` key, Key ID,
   and Issuer ID are supplied.
 - RevenueCat Web Billing has no provider because Stripe is not connected.
-- Sandbox purchases still need a separate staging webhook and backend; the production webhook
-  intentionally excludes sandbox events rather than mixing test and consumer data.
 - A real sandbox purchase, restore, entitlement projection, and physical-device run remain required
   before production billing can be approved.
 

@@ -67,7 +67,7 @@ Kin is a TypeScript application built with Expo SDK 57, React Native, and Expo R
 - **Demo adapter:** AsyncStorage-backed fictional data provides a deterministic, credential-free product walkthrough.
 - **Connected backend:** Supabase Auth, Postgres, Row Level Security, Realtime, private Storage, RPCs, Edge Functions, Cron, and Vault.
 - **Billing:** RevenueCat native and web SDK adapters identify customers with the signed-in Supabase UUID. A signed Supabase webhook refreshes subscriber state and writes a private entitlement projection used for server-authoritative limits.
-- **Delivery:** EAS owns native build profiles, Supabase hosts the production backend in Singapore, and Vercel hosts the public demo.
+- **Delivery:** EAS owns native build profiles, isolated Supabase production and staging projects run in Singapore, and Vercel hosts the public demo.
 
 The production bundle validator rejects missing or wrong-platform public keys and checks that server secrets never enter client bundles.
 
@@ -100,6 +100,11 @@ npm run e2e
 ```
 
 The current release gate passes 67 Jest suites / 340 app tests, 36 Edge Function and operator-tool tests, 14 Playwright journeys across demo and signed-out connected builds, TypeScript, lint, web export, production bundle isolation, and a production dependency policy with 0 high and 0 critical advisories. Expo Doctor passes all 21 checks. EAS also completed an internal Android demo APK from commit `0360804`; the build record is [`15c01a0b-e419-4023-ab16-9dab5e5c8864`](https://expo.dev/accounts/moondrunk/projects/kin/builds/15c01a0b-e419-4023-ab16-9dab5e5c8864).
+
+EAS also completed the connected Android staging APK from commit `a946b3b`; the build record is
+[`5566bd53-578b-4198-b069-d3d4f3fc9f60`](https://expo.dev/accounts/moondrunk/projects/kin/builds/5566bd53-578b-4198-b069-d3d4f3fc9f60).
+It uses isolated staging Supabase plus RevenueCat Test Store and is the build for the final
+physical-device purchase and restore proof.
 
 ## Public Demo Link
 
@@ -154,30 +159,37 @@ The required 1024×1024 uncropped icon is `assets/brand/app-icon.png`. The scree
 - Public Privacy Policy, Terms of Use, Community Standards, Support, and account-deletion routes, including a verified external deletion-request operations path.
 - Public support now resolves to `kaseyho.work@gmail.com` on the stable demo deployment; production deployment `dpl_8fNrPmSEH95gDQQt11fhP8Nc893u` is `READY` and the root, support, and nested Space routes return HTTP 200.
 - RevenueCat now has one required `kin_plus` entitlement, a production-only HMAC-signed webhook, a dedicated v1 server key, and preview/production Android public keys in EAS. The hosted signed-request smoke reached the deployed webhook's expected schema-validation boundary.
+- Isolated Supabase staging now has all eight migrations, 17 RLS-enabled public tables, five active functions, two autonomously verified workers, and a sandbox-only HMAC-signed RevenueCat webhook. EAS preview points only to staging and uses the Test Store key.
+- Connected Android staging build `5566bd53-578b-4198-b069-d3d4f3fc9f60` finished successfully and its downloaded APK passed archive-integrity verification.
+- RevenueCat account email confirmation is complete.
 - Devpost account authenticated, event registration present, rules acknowledged, and an existing untitled pre-draft found for RevenueCat Shipaton 2026.
+- Live Devpost requirements were refreshed on September 29. The deadline is September 30, 2026 at 11:45 PM Pacific Time (`2026-10-01T06:45:00Z`).
 
 ### Required before final entry
 
-- Confirm the RevenueCat account email from the inbox.
-- Add the Google Play service-account JSON and create the real Play subscription/base-plan products. Add Apple and Web Billing credentials only if those platforms will be claimed in the final submission.
-- Create an isolated staging Supabase project and sandbox-only RevenueCat webhook before recording the real Test Store purchase; do not route sandbox events into the production backend.
 - Configure a judge-accessible free trial or promo code; a seven-day free trial is recommended.
 - Complete and record a real sandbox purchase and restore on the target native device.
-- Produce a connected signed iOS or Android build and perform physical-device checks for purchase, notifications, permissions, deep links, and private media. The completed Android demo APK proves the build pipeline only.
+- Install the completed connected Android build and perform physical-device checks for purchase, notifications, permissions, deep links, and private media.
 - Record and publicly upload the final device demo to YouTube or Vimeo.
 - Confirm the Next Gen student email and target categories.
 - Add the Auth SMTP sender, final connected-web URL/redirects, and any store metadata needed for the chosen release path. The current Vercel URL is an intentionally credential-free demo, not the connected consumer web app.
 
+### Required only for a store-published entry
+
+- Add the Google Play service-account JSON and create real Play subscription/base-plan products.
+- Add Apple and Web Billing credentials only if those platforms will be claimed in the final submission.
+- Supply the published store URL. These provider gates are not required for the student Next Gen path, which accepts the public repository and device demo instead.
+
 ## Known Limitations
 
-- The public demo intentionally simulates billing. RevenueCat's production webhook, server key, public Android keys, entitlement, offering, and Test Store products are configured, but store credentials and real receipt proof remain incomplete.
-- A signed internal Android demo APK now exists; physical-device, connected native build, push-delivery, and real receipt evidence remain open release gates.
+- The public demo intentionally simulates billing. RevenueCat's isolated production and sandbox webhooks, server key, public Android keys, entitlement, offering, and Test Store products are configured, but store credentials and real receipt proof remain incomplete.
+- Signed internal demo and connected staging Android APKs exist; physical-device, push-delivery, and real receipt evidence remain open release gates.
 - Hosted Auth still needs a custom SMTP sender and final redirect configuration before consumer signup should be opened broadly.
 - Group Kin Spaces, voice/video calls, message import, and automatic AI memory suggestions are explicitly out of scope for this focused first release.
 
 ## TODO Official Form Fields
 
-Official requirements fetched live from Devpost on 2026-09-27.
+Official requirements refreshed live from Devpost on 2026-09-29.
 
 | Field | Draft answer / action |
 | --- | --- |
